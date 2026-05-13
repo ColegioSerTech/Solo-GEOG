@@ -1,0 +1,775 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Mountain, Trophy, AlertCircle, CheckCircle2, 
+  MessageSquare, Shovel, Map, User, Pickaxe,
+  ChevronUp, ChevronDown, Move, ArrowLeft, Info,
+  Beaker, Microscope, Wind, Droplets, Thermometer,
+  Layers, Search, Database, Leaf, Bug, TreePine, Skull, Recycle
+} from 'lucide-react';
+
+// --- UTILS ---
+const normalize = (str) => 
+  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+// --- COMPONENTS ---
+const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
+  const baseStyle = "px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg";
+  const variants = {
+    primary: "bg-amber-600 hover:bg-amber-500 text-white",
+    secondary: "bg-stone-700 hover:bg-stone-600 text-stone-100",
+    success: "bg-green-600 hover:bg-green-500 text-white",
+    outline: "border-2 border-amber-600 text-amber-500 hover:bg-amber-600/10",
+    ghost: "text-stone-400 hover:text-white hover:bg-white/5",
+  };
+  return (
+    <button disabled={disabled} onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
+      {children}
+    </button>
+  );
+};
+
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-stone-800/80 backdrop-blur-sm border border-stone-700 p-6 rounded-2xl shadow-xl ${className}`}>
+    {children}
+  </div>
+);
+
+const FeedbackOverlay = ({ type, message }) => (
+  <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-8 py-4 rounded-3xl shadow-2xl animate-in slide-in-from-top-10 duration-300 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+    <div className="flex items-center gap-3">
+        {type === 'success' ? <CheckCircle2 className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
+        <span className="font-bold text-white text-lg text-center uppercase tracking-tight">{type === 'success' ? 'Sucesso!' : 'Atenção!'}</span>
+    </div>
+    <span className="text-white/90 text-sm font-medium text-center">{message}</span>
+  </div>
+);
+
+const PhaseHeader = ({ title, level, description, onBack }) => (
+  <div className="mb-6">
+    <div className="flex items-center justify-between mb-2">
+      <Button variant="ghost" onClick={onBack} className="px-2 py-1 text-[10px]">
+        <ArrowLeft size={12} /> RETORNAR
+      </Button>
+      <span className="text-amber-500 font-black text-[10px] uppercase tracking-[0.2em] bg-amber-500/10 px-3 py-1 rounded-full">Fase {level}/20</span>
+    </div>
+    <h3 className="text-2xl font-black uppercase text-white mb-3 tracking-tighter leading-none">{title}</h3>
+    <div className="bg-stone-900/50 border-l-4 border-amber-600 p-4 rounded-r-xl">
+      <p className="text-stone-300 text-xs leading-relaxed font-medium">
+        {description}
+      </p>
+    </div>
+  </div>
+);
+
+// --- MAIN APP ---
+export default function App() {
+  const [phase, setPhase] = useState(0);
+  const [feedback, setFeedback] = useState(null);
+  const [progress, setProgress] = useState(0);
+
+  const triggerFeedback = useCallback((type, message) => {
+    setFeedback({ type, message });
+    if (type === 'success') {
+      setTimeout(() => {
+        setPhase(p => p + 1);
+        setFeedback(null);
+      }, 2500);
+    } else {
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  }, []);
+
+  useEffect(() => {
+    setProgress((phase / 20) * 100);
+  }, [phase]);
+
+  const goBack = () => setPhase(prev => Math.max(0, prev - 1));
+
+  return (
+    <div className="min-h-screen bg-stone-950 text-stone-100 font-sans p-4 selection:bg-amber-500/30 selection:text-white">
+      <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden">
+         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-amber-900 rounded-full blur-[150px] animate-pulse" />
+         <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] bg-stone-800 rounded-full blur-[150px]" />
+      </div>
+
+      {feedback && <FeedbackOverlay type={feedback.type} message={feedback.message} />}
+
+      <div className="relative z-10 max-w-2xl mx-auto py-8">
+        <header className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <div className={`p-4 rounded-2xl shadow-xl border ${phase > 10 ? 'bg-gradient-to-br from-indigo-600 to-indigo-800 border-indigo-500/50' : 'bg-amber-600 border-amber-500'}`}>
+              {phase > 10 ? <Trophy className="w-7 h-7 text-white" /> : <Mountain className="w-7 h-7 text-white" />}
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-black text-stone-100 uppercase leading-none tracking-tighter">Mistérios do Solo</h1>
+              <p className={`text-[10px] font-bold uppercase tracking-[0.3em] ${phase > 10 ? 'text-indigo-400' : 'text-amber-500'}`}>
+                {phase > 10 ? 'Olimpíada de Ciências (6º Ano)' : 'Jornada Fundamental'}
+              </p>
+            </div>
+          </div>
+          
+          {phase > 0 && phase <= 20 && (
+            <div className="hidden sm:flex bg-stone-900/80 p-4 rounded-2xl border border-stone-700 items-center gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Progresso Total</p>
+                <div className={`text-lg font-black ${phase > 10 ? 'text-indigo-400' : 'text-amber-500'}`}>{phase}/20</div>
+              </div>
+            </div>
+          )}
+        </header>
+
+        {phase > 0 && phase <= 20 && (
+            <div className="w-full h-1.5 bg-stone-800 rounded-full mb-8 overflow-hidden">
+                <div className={`h-full transition-all duration-700 ${phase > 10 ? 'bg-indigo-500' : 'bg-amber-500'}`} style={{ width: `${progress}%` }} />
+            </div>
+        )}
+
+        <main className="min-h-[600px]">
+          {phase === 0 && <ScreenWelcome onStart={() => setPhase(1)} />}
+          
+          {/* Fases Básicas (1 a 10) */}
+          {phase === 1 && <Phase1 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 2 && <Phase2 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 3 && <Phase3 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 4 && <Phase4 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 5 && <Phase5 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 6 && <Phase6 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 7 && <Phase7 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 8 && <Phase8 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 9 && <Phase9 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 10 && <Phase10 onAction={triggerFeedback} onBack={goBack} />}
+          
+          {/* Fases Desafio 6º Ano (11 a 20) */}
+          {phase === 11 && <Phase11 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 12 && <Phase12 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 13 && <Phase13 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 14 && <Phase14 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 15 && <Phase15 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 16 && <Phase16 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 17 && <Phase17 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 18 && <Phase18 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 19 && <Phase19 onAction={triggerFeedback} onBack={goBack} />}
+          {phase === 20 && <Phase20 onAction={triggerFeedback} onBack={goBack} />}
+          
+          {phase === 21 && <ScreenVictory onRestart={() => setPhase(0)} />}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// --- SCREENS ---
+
+const ScreenWelcome = ({ onStart }) => (
+  <Card className="flex flex-col items-center text-center py-20 animate-in zoom-in duration-500 border-amber-600/20">
+    <div className="p-8 bg-amber-600/10 rounded-full mb-10 relative">
+        <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping" />
+        <Map className="w-16 h-16 text-amber-500 relative z-10" />
+    </div>
+    <h2 className="text-5xl font-black mb-6 uppercase tracking-tighter leading-tight">Jornada<br/><span className="text-amber-500">Geológica</span></h2>
+    <p className="text-stone-400 mb-10 max-w-sm leading-relaxed text-sm font-medium">
+      São 20 desafios que testarão os seus conhecimentos desde os fundamentos da formação da terra até à complexa "Olimpíada de Ciências" do 6º ano.
+    </p>
+    <Button onClick={onStart} className="w-full py-6 text-xl shadow-amber-500/10">INICIAR EXPEDIÇÃO</Button>
+  </Card>
+);
+
+// ==========================================
+// PARTE 1: NÍVEL FUNDAMENTAL (Fases 1 a 10)
+// ==========================================
+
+const Phase1 = ({ onAction, onBack }) => {
+  const [isShovelActive, setIsShovelActive] = useState(false);
+  const [dugBlocks, setDugBlocks] = useState([]);
+  const [answer, setAnswer] = useState("");
+  const [hint, setHint] = useState("Clique na pá para começar a escavação!");
+
+  const excavationSteps = [
+    { id: 1, label: "Superfície", color: "bg-green-900", hint: "Aqui em cima temos muita matéria orgânica e vida!" },
+    { id: 2, label: "Húmus", color: "bg-stone-900", hint: "O solo está a ficar mais escuro e rico em nutrientes." },
+    { id: 3, label: "Minerais", color: "bg-amber-900", hint: "Muitos minerais acumulados. Estamos longe da luz agora." },
+    { id: 4, label: "Fragmentos", color: "bg-stone-700", hint: "Comecei a encontrar pedaços de rocha partida..." },
+    { id: 5, label: "Base Sólida", color: "bg-stone-600", hint: "Cheguei no limite! É uma parede de pedra impenetrável." }
+  ];
+
+  const handleDig = (step) => {
+    if (!isShovelActive) return setHint("Primeiro, ative a pá clicando nela!");
+    if (dugBlocks.includes(step.id)) return;
+    if (dugBlocks.length + 1 !== step.id) return setHint("Devemos cavar camada por camada, de cima para baixo!");
+    setDugBlocks([...dugBlocks, step.id]);
+    setHint(step.hint);
+  };
+
+  const checkAnswer = () => {
+    const val = normalize(answer);
+    if (["rocha mae", "rochamae", "rocha-mae", "rocha matriz"].includes(val)) onAction('success', 'Excelente! A Rocha Mãe é o ponto zero do solo.');
+    else onAction('error', 'Pense no alicerce geológico inalterado.');
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-bottom">
+      <PhaseHeader onBack={onBack} level={1} title="Origem Primordial" description="Todo solo começa com a transformação de uma rocha sólida. Cave até a base para descobrir o nome técnico do material geológico que dá origem ao solo." />
+      <div className="flex items-start gap-4 bg-stone-900/80 p-4 rounded-2xl border border-stone-700 mb-6">
+        <div className="flex flex-col items-center gap-2">
+           <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center border-2 border-white/20"><User className="text-white" size={24} /></div>
+           <button onClick={() => setIsShovelActive(!isShovelActive)} className={`p-2 rounded-lg transition-all ${isShovelActive ? 'bg-amber-500 text-white scale-110' : 'bg-stone-800 text-stone-500'}`}><Shovel size={20} /></button>
+        </div>
+        <div className="flex-1 bg-stone-950 p-3 rounded-xl text-sm italic text-amber-100 border border-amber-900/30">
+          <MessageSquare className="inline-block mr-2 text-amber-500" size={14} />{hint}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 bg-stone-950 p-2 rounded-xl border-4 border-stone-800 mb-6">
+        {excavationSteps.map((step) => (
+          <button key={step.id} onClick={() => handleDig(step)} className={`h-12 w-full transition-all flex items-center justify-center font-black text-xs uppercase relative overflow-hidden ${dugBlocks.includes(step.id) ? 'opacity-20 bg-transparent' : `${step.color} hover:brightness-110`} ${isShovelActive && !dugBlocks.includes(step.id) ? 'cursor-crosshair' : ''}`}>
+            {!dugBlocks.includes(step.id) && <span className="z-10 text-white/50">{step.label}</span>}
+            {dugBlocks.includes(step.id) && <Pickaxe size={16} className="text-amber-900 opacity-40" />}
+          </button>
+        ))}
+      </div>
+      {dugBlocks.length === excavationSteps.length && (
+        <div className="flex flex-col gap-4 animate-in fade-in">
+          <input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && checkAnswer()} placeholder="Nome da rocha base?" className="bg-stone-950 border-2 border-amber-600/50 rounded-xl p-4 text-center font-bold uppercase" />
+          <Button onClick={checkAnswer}>CONFIRMAR RESPOSTA</Button>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const Phase2 = ({ onAction, onBack }) => {
+  const [selected, setSelected] = useState([]);
+  const items = [
+    { id: 1, label: "Minerais", ok: true, emoji: "💎" }, { id: 2, label: "M. Orgânica", ok: true, emoji: "🍂" },
+    { id: 3, label: "Plástico", ok: false, emoji: "🥤" }, { id: 4, label: "Água", ok: true, emoji: "💧" },
+    { id: 5, label: "Vidro", ok: false, emoji: "🧪" }, { id: 6, label: "Ar", ok: true, emoji: "💨" },
+    { id: 7, label: "Metal", ok: false, emoji: "⚙️" }, { id: 8, label: "Concreto", ok: false, emoji: "🧱" },
+    { id: 9, label: "Lixo", ok: false, emoji: "📟" },
+  ];
+  const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const check = () => {
+    const okIds = items.filter(i => i.ok).map(i => i.id);
+    if (selected.length === 4 && selected.every(id => okIds.includes(id))) onAction('success', 'Composição equilibrada!');
+    else onAction('error', 'Foque nos 4 componentes naturais essenciais.');
+  };
+  return (
+    <Card className="animate-in slide-in-from-right">
+      <PhaseHeader onBack={onBack} level={2} title="Receita da Terra" description="O solo é um sistema trifásico (sólido, líquido e gasoso). Selecione os 4 elementos naturais que compõem um solo saudável." />
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {items.map(item => (
+          <button key={item.id} onClick={() => toggle(item.id)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${selected.includes(item.id) ? 'bg-amber-600 border-amber-400 scale-105' : 'bg-stone-900 border-stone-800 opacity-60'}`}>
+            <span className="text-2xl">{item.emoji}</span><span className="text-[10px] font-black uppercase text-center">{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <Button onClick={check}>VERIFICAR COMPOSIÇÃO</Button>
+    </Card>
+  );
+};
+
+const Phase3 = ({ onAction, onBack }) => {
+  const [order, setOrder] = useState([
+    { id: 'bi', t: 'Biológico', d: 'Raízes de plantas e micro-organismos quebram e alteram a estrutura.' },
+    { id: 'qu', t: 'Químico', d: 'A água e o oxigénio dissolvem e transformam os minerais da rocha.' },
+    { id: 'fi', t: 'Físico', d: 'A variação de temperatura (calor/frio) racha a rocha mecanicamente.' }
+  ]);
+  const rotate = () => setOrder(prev => [...prev.slice(1), prev[0]]);
+  return (
+    <Card className="animate-in slide-in-from-right">
+      <PhaseHeader onBack={onBack} level={3} title="Forças da Natureza" description="O intemperismo é o processo de desintegração das rochas. Em desertos, a grande variação térmica causa a fragmentação mecânica da pedra. Qual tipo de intemperismo é esse?" />
+      <div className="bg-stone-950 p-6 rounded-2xl border-2 border-amber-900/30 mb-6 text-center">
+        <h4 className="text-amber-500 font-black text-xl mb-2 uppercase">{order[0].t}</h4>
+        <p className="text-stone-400 text-sm italic">"{order[0].d}"</p>
+      </div>
+      <div className="flex gap-4">
+        <Button variant="outline" className="flex-1" onClick={rotate}>PRÓXIMO TIPO</Button>
+        <Button className="flex-1" onClick={() => order[0].id === 'fi' ? onAction('success', 'Intemperismo Físico detetado!') : onAction('error', 'O tipo físico é o responsável pela dilatação.')}>CONFIRMAR</Button>
+      </div>
+    </Card>
+  );
+};
+
+const Phase4 = ({ onAction, onBack }) => (
+  <Card className="animate-in slide-in-from-right">
+    <PhaseHeader onBack={onBack} level={4} title="Granulometria" description="A textura do solo depende do tamanho de suas partículas. Qual destas frações possui as menores partículas (< 0,002mm), sendo responsável pela plasticidade?" />
+    <div className="flex flex-col gap-3">
+      {[{l: "AREIA (2mm a 0,05mm)", v: false}, {l: "SILTE (0,05mm a 0,002mm)", v: false}, {l: "ARGILA (< 0,002mm)", v: true}].map(o => (
+        <button key={o.l} onClick={() => o.v ? onAction('success', 'A argila define a liga do solo!') : onAction('error', 'Partícula grande demais.')} className="p-5 bg-stone-900 border border-stone-700 rounded-xl font-black text-left hover:border-amber-500/50">{o.l}</button>
+      ))}
+    </div>
+  </Card>
+);
+
+const Phase5 = ({ onAction, onBack }) => {
+  const [layers, setLayers] = useState([
+    { id: 'C', n: 'Rocha Fragmentada', c: 'bg-stone-600' },
+    { id: 'O', n: 'Camada Orgânica', c: 'bg-green-950' },
+    { id: 'A', n: 'Mineral + Húmus', c: 'bg-stone-900' },
+    { id: 'B', n: 'Iluvial', c: 'bg-amber-900' },
+  ]);
+  const [selected, setSelected] = useState(null);
+  const moveLayer = (dir) => {
+    if (selected === null) return;
+    const newIdx = dir === 'up' ? selected - 1 : selected + 1;
+    if (newIdx < 0 || newIdx >= layers.length) return;
+    const n = [...layers];
+    const [m] = n.splice(selected, 1);
+    n.splice(newIdx, 0, m);
+    setLayers(n); setSelected(newIdx);
+  };
+  return (
+    <Card className="animate-in slide-in-from-right">
+      <PhaseHeader onBack={onBack} level={5} title="Perfil de Solo" description="Ao fazer um corte vertical, vemos horizontes. Organize as camadas de solo da superfície (topo) para o interior da terra (base)." />
+      <div className="flex gap-4 items-start mb-6">
+        <div className="flex-1 flex flex-col gap-2">
+          {layers.map((l, i) => (
+            <button key={l.id} onClick={() => setSelected(i)} className={`p-4 rounded-xl border-2 flex flex-col text-left ${selected === i ? 'border-amber-500 bg-amber-500/5' : 'border-stone-700 bg-stone-900/50'}`}>
+              <div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${l.c}`} /><span className="font-black text-sm uppercase">{l.n}</span></div>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-3 sticky top-0">
+          <button disabled={selected === null || selected === 0} onClick={() => moveLayer('up')} className="p-4 bg-amber-600/20 text-amber-500 rounded-2xl disabled:opacity-5"><ChevronUp size={24} /></button>
+          <button disabled={selected === null || selected === layers.length - 1} onClick={() => moveLayer('down')} className="p-4 bg-amber-600/20 text-amber-500 rounded-2xl disabled:opacity-5"><ChevronDown size={24} /></button>
+        </div>
+      </div>
+      <Button onClick={() => layers.map(l => l.id).join('') === 'OABC' ? onAction('success', 'Perfil organizado!') : onAction('error', 'A ordem correta reflete a profundidade da superfície para a rocha.')} className="w-full">VERIFICAR ESTRUTURA</Button>
+    </Card>
+  );
+};
+
+const Phase6 = ({ onAction, onBack }) => {
+  const [ph, setPh] = useState(0);
+  return (
+    <Card className="animate-in slide-in-from-right">
+      <PhaseHeader onBack={onBack} level={6} title="Química da Fertilidade" description="O pH indica a acidez ou alcalinidade. A maioria das culturas agrícolas prefere solos levemente ácidos a neutros. Ajuste o sensor para o pH ideal (entre 6.0 e 7.0)." />
+      <div className="h-32 rounded-3xl border-4 flex flex-col items-center justify-center mb-6 bg-stone-900 border-stone-700 text-stone-200">
+        <span className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Indicador de Acidez</span>
+        <div className="text-5xl font-black">{ph.toFixed(1)}</div>
+        <span className="text-xs font-bold mt-1 uppercase">
+          {ph < 7 ? 'Ácido' : ph === 7 ? 'Neutro' : 'Básico / Alcalino'}
+        </span>
+      </div>
+      <input type="range" min="0" max="14" step="0.5" value={ph} onChange={e => setPh(parseFloat(e.target.value))} className="w-full h-4 bg-stone-900 rounded-lg appearance-none accent-amber-500 mb-6" />
+      <Button onClick={() => (ph >= 6 && ph <= 7) ? onAction('success', 'pH Neutro! Nutrientes disponíveis.') : onAction('error', 'Solo fora da faixa ideal.')}>ANALISAR AMOSTRA</Button>
+    </Card>
+  );
+};
+
+const Phase7 = ({ onAction, onBack }) => (
+  <Card className="animate-in slide-in-from-right">
+    <PhaseHeader onBack={onBack} level={7} title="Solos do Brasil" description="A famosa 'Terra Roxa' do Sul/Sudeste brasileiro é extremamente fértil e originada do basalto. Qual componente mineral, ao oxidar, confere a cor avermelhada a este solo?" />
+    <div className="grid grid-cols-2 gap-4">
+      {[{l: "Óxido de Ferro", v: true, e: "🧲"}, {l: "Silício Puro", v: false, e: "💎"}, {l: "Cálcio", v: false, e: "🐚"}, {l: "Enxofre", v: false, e: "🌋"}].map(o => (
+        <button key={o.l} onClick={() => o.v ? onAction('success', 'Correto! O ferro oxidado dá o tom avermelhado.') : onAction('error', 'Este mineral não causa a cor.')} className="p-6 bg-stone-900 border border-stone-700 rounded-2xl font-bold flex flex-col items-center gap-2 hover:border-amber-500">
+          <span className="text-2xl">{o.e}</span><span className="text-xs uppercase text-center">{o.l}</span>
+        </button>
+      ))}
+    </div>
+  </Card>
+);
+
+const Phase8 = ({ onAction, onBack }) => (
+  <Card className="animate-in slide-in-from-right">
+    <PhaseHeader onBack={onBack} level={8} title="Conservação" description="Em terrenos inclinados, a chuva pode lavar o solo. O plantio em 'Curvas de Nível' tem qual função técnica principal?" />
+    <div className="flex flex-col gap-3">
+      <Button variant="secondary" className="justify-start py-5 px-6 text-left" onClick={() => onAction('error', 'Isso agravaria a erosão.')}>Aumentar velocidade da drenagem</Button>
+      <Button variant="secondary" className="justify-start py-5 px-6 text-left" onClick={() => onAction('success', 'Exato! Reduzir a energia cinética da água evita o arraste.')}>Reduzir a velocidade do escoamento superficial</Button>
+    </div>
+  </Card>
+);
+
+const Phase9 = ({ onAction, onBack }) => (
+  <Card className="animate-in slide-in-from-right">
+    <PhaseHeader onBack={onBack} level={9} title="O Paradoxo Físico" description="Qual solo possui muitos espaços vazios (alta porosidade), mas os poros são tão pequenos que a água fica 'presa' (baixa permeabilidade)?" />
+    <div className="grid grid-cols-2 gap-4">
+      <button onClick={() => onAction('error', 'A areia é altamente permeável.')} className="p-10 bg-stone-900 border-2 border-stone-800 rounded-3xl font-black text-xl hover:border-amber-500 uppercase">Arenoso</button>
+      <button onClick={() => onAction('success', 'Isso! A argila retém água nos microporos.')} className="p-10 bg-stone-900 border-2 border-stone-800 rounded-3xl font-black text-xl hover:border-amber-500 uppercase">Argiloso</button>
+    </div>
+  </Card>
+);
+
+const Phase10 = ({ onAction, onBack }) => {
+  const [choices, setChoices] = useState([]);
+  const valid = [1, 3, 4];
+  const toggle = (id) => setChoices(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
+  return (
+    <Card className="animate-in slide-in-from-right">
+       <PhaseHeader onBack={onBack} level={10} title="Sustentabilidade" description="Selecione as 3 práticas que protegem a estrutura e a vida do solo para manter sua produtividade sustentável." />
+      <div className="flex flex-col gap-3 mb-6">
+        {[{id: 1, l: "Rotação de Culturas"}, {id: 2, l: "Queimadas para limpeza"}, {id: 3, l: "Plantio Direto (Sem revolver)"}, {id: 4, l: "Adubação Verde"}].map(o => (
+          <button key={o.id} onClick={() => toggle(o.id)} className={`p-4 rounded-xl border-2 flex items-center gap-3 text-left ${choices.includes(o.id) ? 'bg-amber-600/20 border-amber-500' : 'bg-stone-900 border-stone-700'}`}>
+            <span className="font-bold uppercase text-xs">{o.l}</span>
+          </button>
+        ))}
+      </div>
+      <Button onClick={() => choices.length === 3 && choices.every(x => valid.includes(x)) ? onAction('success', 'Você concluiu os fundamentos!') : onAction('error', 'Selecione exatamente as 3 práticas positivas.')} variant="success" className="py-5 w-full">AVANÇAR PARA A OLIMPÍADA DE CIÊNCIAS</Button>
+    </Card>
+  );
+};
+
+// ==========================================
+// PARTE 2: DESAFIO OLIMPÍADA - 6º ANO (Fases 11 a 20)
+// ==========================================
+
+const Phase11 = ({ onAction, onBack }) => {
+  const [step, setStep] = useState(1);
+  const [selectedRock, setSelectedRock] = useState(null);
+
+  const rockTypes = [
+    { id: 'ig', n: 'Ígneas (Magmáticas)', d: 'Formadas pelo resfriamento do magma.', icon: '🌋' },
+    { id: 'se', n: 'Sedimentares', d: 'Formadas pela compactação de sedimentos.', icon: '🏜️' },
+    { id: 'me', n: 'Metamórficas', d: 'Transformadas por calor e pressão extrema.', icon: '💎' }
+  ];
+
+  const handleVerify = () => {
+    if (step === 1 && selectedRock === 'ig') {
+      setStep(2); setSelectedRock(null);
+      onAction('success', 'Correto! O basalto é uma rocha magmática.');
+    } else if (step === 2 && selectedRock === 'se') {
+      setStep(3); setSelectedRock(null);
+      onAction('success', 'Exato! O acúmulo de partículas gera rochas sedimentares.');
+    } else if (step === 3 && selectedRock === 'me') {
+      onAction('success', 'Mestre das Rochas! Pressão e calor geram rochas metamórficas.');
+    } else {
+      onAction('error', 'Analise o processo descrito e tente novamente.');
+    }
+  };
+
+  const currentDesc = step === 1 
+    ? "Ocorreu uma erupção vulcânica. A lava escorreu e resfriou-se rapidamente na superfície, formando o Basalto. Qual é este tipo de rocha?"
+    : step === 2 
+    ? "O vento e a água carregaram grãos de areia por milhões de anos até o fundo de um lago, onde foram esmagados e cimentados. Qual é esta rocha?"
+    : "Uma rocha antiga foi empurrada para as profundezas da crosta. O calor extremo e o peso das montanhas acima alteraram toda a sua estrutura. Qual é a rocha resultante?";
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={11} title="O Ciclo das Rochas" description="A rocha-mãe pode ter origens muito diferentes. Leia a descrição do evento geológico e selecione qual tipo de rocha foi formado." />
+      <div className="bg-stone-900 p-6 rounded-2xl border border-indigo-500/30 text-center mb-6">
+        <span className="text-indigo-400 font-black text-[10px] uppercase tracking-widest block mb-2">Evento Geológico {step} de 3</span>
+        <p className="font-bold text-stone-200">{currentDesc}</p>
+      </div>
+      <div className="flex flex-col gap-3 mb-6">
+         {rockTypes.map(r => (
+            <button key={r.id} onClick={() => setSelectedRock(r.id)} className={`p-4 rounded-xl border-2 flex items-center gap-4 text-left transition-all ${selectedRock === r.id ? 'bg-indigo-600/20 border-indigo-500' : 'bg-stone-900 border-stone-700 hover:border-indigo-500/50'}`}>
+                <span className="text-3xl">{r.icon}</span>
+                <div>
+                    <p className="font-black uppercase text-sm">{r.n}</p>
+                    <p className="text-[10px] text-stone-400">{r.d}</p>
+                </div>
+            </button>
+         ))}
+      </div>
+      <Button onClick={handleVerify} disabled={!selectedRock} className="w-full bg-indigo-600 hover:bg-indigo-500">IDENTIFICAR ROCHA</Button>
+    </Card>
+  );
+};
+
+const Phase12 = ({ onAction, onBack }) => {
+  const [areia, setAreia] = useState(80);
+  const argila = 100 - areia;
+
+  const check = () => {
+    if (areia >= 40 && areia <= 60) onAction('success', 'Solo equilibrado (Franco)! Retém a água ideal.');
+    else if (areia > 60) onAction('error', 'Tem muita areia. A água vai drenar muito rápido e a planta vai secar.');
+    else onAction('error', 'Tem muita argila. A água vai empoçar e as raízes vão apodrecer.');
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={12} title="O Equilíbrio Físico" description="Uma planta precisa de um solo que retenha água, mas que não fique encharcado. Misture as frações de Areia e Argila para criar um solo balanceado (Solo Franco)." />
+      <div className="flex items-center gap-4 mb-8 h-40">
+        <div className="flex-1 flex flex-col justify-end bg-amber-900/20 rounded-b-2xl border-4 border-amber-600/50 h-full relative overflow-hidden">
+            <div className="bg-amber-600 w-full transition-all duration-300" style={{ height: `${areia}%` }} />
+            <span className="absolute inset-0 flex items-center justify-center font-black text-2xl drop-shadow-md">{areia}% Areia</span>
+        </div>
+        <div className="flex-1 flex flex-col justify-end bg-orange-900/20 rounded-b-2xl border-4 border-orange-800/50 h-full relative overflow-hidden">
+            <div className="bg-orange-800 w-full transition-all duration-300" style={{ height: `${argila}%` }} />
+            <span className="absolute inset-0 flex items-center justify-center font-black text-2xl drop-shadow-md">{argila}% Argila</span>
+        </div>
+      </div>
+      <input type="range" min="10" max="90" value={areia} onChange={e => setAreia(parseInt(e.target.value))} className="w-full h-4 bg-stone-900 rounded-lg appearance-none accent-indigo-500 mb-8" />
+      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">TESTAR PERMEABILIDADE</Button>
+    </Card>
+  );
+};
+
+const Phase13 = ({ onAction, onBack }) => {
+  const [step, setStep] = useState(1);
+  const [answer, setAnswer] = useState("");
+
+  const handleAction = () => {
+    if (step === 1) {
+      onAction('success', 'A minhoca! Ela cava túneis que deixam o ar e a água entrarem.');
+      setStep(2);
+    } else {
+      if (normalize(answer) === "humus" || normalize(answer) === "húmus") {
+        onAction('success', 'Isso mesmo! O húmus é um adubo natural incrível.');
+      } else {
+        onAction('error', 'É uma palavra de 5 letras. Começa com H. É a matéria orgânica em decomposição.');
+      }
+    }
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={13} title="O Engenheiro Subterrâneo" description="Certos animais são fundamentais para o ecossistema do solo, pois atuam como 'arados naturais' e produtores de fertilizante." />
+      {step === 1 ? (
+        <div className="flex flex-col gap-6 text-center">
+           <p className="text-stone-300 font-bold mb-4">Selecione o animal que cava galerias ajudando na aeração do solo:</p>
+           <div className="grid grid-cols-2 gap-4">
+              {['🐜 Formiga', '🐛 Centopeia', '🪱 Minhoca', '🐌 Lesma'].map(bug => (
+                <button key={bug} onClick={() => bug.includes('Minhoca') ? handleAction() : onAction('error', 'Não é o principal arado natural.')} className="p-6 bg-stone-900 border-2 border-stone-700 rounded-2xl text-2xl hover:bg-stone-800 hover:border-indigo-500 transition-all">{bug}</button>
+              ))}
+           </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6 text-center">
+          <p className="text-stone-300 font-bold mb-4">A minhoca ingere terra e restos de plantas. As suas fezes formam uma matéria escura e muito fértil. Qual é o nome deste adubo orgânico natural?</p>
+          <input autoFocus value={answer} onChange={e => setAnswer(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAction()} placeholder="NOME DO MATERIAL" className="bg-stone-950 p-4 rounded-xl border-2 border-indigo-500 text-center font-black uppercase text-xl outline-none" />
+          <Button onClick={handleAction} className="bg-indigo-600 hover:bg-indigo-500">VERIFICAR NOME</Button>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const Phase14 = ({ onAction, onBack }) => {
+  const [treePlanted, setTreePlanted] = useState(false);
+
+  const check = () => {
+    if (treePlanted) onAction('success', 'Mata Ciliar protegida! O rio está a salvo do assoreamento.');
+    else onAction('error', 'Sem as raízes das árvores, a terra da margem desaba para dentro do rio.');
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={14} title="Ameaça ao Rio (Assoreamento)" description="Quando se retira a vegetação das margens de um rio, a terra solta é lavada pela chuva e vai parar ao fundo do rio, secando-o. Como se chama a vegetação que devemos manter para evitar isso?" />
+      
+      <div className="relative h-48 bg-stone-900 rounded-2xl overflow-hidden mb-8 border-4 border-stone-800 flex flex-col justify-end">
+         <div className="h-1/2 w-full bg-blue-500/60 relative flex items-center justify-center">
+            <span className="text-blue-200 font-black tracking-widest opacity-50">LEITO DO RIO</span>
+            {!treePlanted && <div className="absolute inset-x-0 bottom-0 h-1/2 bg-amber-900/80 animate-pulse" title="Terra invadindo o rio (Assoreamento)" />}
+         </div>
+         <div className="absolute top-0 inset-x-0 flex justify-between p-4">
+            <button onClick={() => setTreePlanted(true)} className={`w-16 h-24 flex items-end justify-center rounded-xl transition-all ${treePlanted ? 'bg-green-900/50 scale-110' : 'bg-stone-800 hover:bg-stone-700 border-2 border-dashed border-stone-600'}`}>
+                {treePlanted ? <TreePine className="text-green-500 w-12 h-12" /> : <span className="text-[10px] text-stone-500 font-bold mb-2">PLANTAR</span>}
+            </button>
+            <button onClick={() => setTreePlanted(true)} className={`w-16 h-24 flex items-end justify-center rounded-xl transition-all ${treePlanted ? 'bg-green-900/50 scale-110' : 'bg-stone-800 hover:bg-stone-700 border-2 border-dashed border-stone-600'}`}>
+                {treePlanted ? <TreePine className="text-green-500 w-12 h-12" /> : <span className="text-[10px] text-stone-500 font-bold mb-2">PLANTAR</span>}
+            </button>
+         </div>
+      </div>
+      <div className="flex gap-4">
+        <Button variant="secondary" className="flex-1 text-xs" onClick={() => onAction('error', 'O pasto não segura a margem do rio com força suficiente.')}>Plantar Pasto</Button>
+        <Button variant="secondary" onClick={check} className="flex-1 text-xs">Restaurar Mata Ciliar</Button>
+      </div>
+    </Card>
+  );
+};
+
+const Phase15 = ({ onAction, onBack }) => {
+  const [seq, setSeq] = useState([null, null, null]);
+  const crops = [{id: 'milho', e: '🌽', n: 'Milho'}, {id: 'soja', e: '🌱', n: 'Soja (Leguminosa)'}];
+
+  const setSlot = (i, cropId) => {
+    const n = [...seq]; n[i] = cropId; setSeq(n);
+  };
+
+  const check = () => {
+    if (seq.includes(null)) return onAction('error', 'Preencha os 3 anos de plantio.');
+    if (seq[0] === 'milho' && seq[1] === 'soja' && seq[2] === 'milho') onAction('success', 'A Rotação de Culturas recupera o nitrogénio usando a leguminosa!');
+    else if (seq[0] === 'soja' && seq[1] === 'milho' && seq[2] === 'soja') onAction('success', 'Correto! Alternar as culturas não esgota o solo.');
+    else onAction('error', 'Plantar a mesma coisa seguida esgota os nutrientes (Monocultura). Deve alternar!');
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={15} title="Técnicas: Rotação" description="Plantar milho ano após ano esgota o solo. Monte um ciclo de plantio de 3 anos alternando o Milho com uma Leguminosa (que devolve Nitrogénio à terra)." />
+      <div className="flex justify-between gap-2 mb-8">
+         {[0,1,2].map(i => (
+           <div key={i} className="flex-1 flex flex-col items-center gap-2">
+             <span className="text-[10px] font-black uppercase text-stone-500">Ano {i+1}</span>
+             <div className="w-full h-24 bg-stone-900 border-2 border-dashed border-stone-700 rounded-xl flex flex-col items-center justify-center p-1">
+                {seq[i] ? <span className="text-3xl">{crops.find(c=>c.id === seq[i]).e}</span> : <span className="text-xs text-stone-600">Vazio</span>}
+             </div>
+             <div className="flex gap-1 w-full">
+                <button onClick={() => setSlot(i, 'milho')} className="flex-1 bg-stone-800 p-1 rounded text-xs hover:bg-amber-600">🌽</button>
+                <button onClick={() => setSlot(i, 'soja')} className="flex-1 bg-stone-800 p-1 rounded text-xs hover:bg-green-600">🌱</button>
+             </div>
+           </div>
+         ))}
+      </div>
+      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">VERIFICAR CICLO AGRÍCOLA</Button>
+    </Card>
+  );
+};
+
+const Phase16 = ({ onAction, onBack }) => {
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={16} title="Os Arquivos da Terra" description="Os fósseis (ossos de dinossauros, folhas antigas) contam a história da Terra. Mas o calor derrete-os e a pressão destrói-os. Em que tipo de rocha os fósseis conseguem sobreviver?" />
+      <div className="flex justify-center mb-8">
+        <div className="p-6 bg-stone-900 rounded-full border-4 border-stone-700 shadow-inner">
+           <Skull className="w-16 h-16 text-stone-400" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-3">
+        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('error', 'O magma derreteria o osso completamente.')}>Rochas Magmáticas (Ígneas)</Button>
+        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('error', 'A pressão e calor extremos deformariam o fóssil.')}>Rochas Metamórficas</Button>
+        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('success', 'Exato! Eles ficam preservados entre as camadas de sedimentos (areia/lama).')}>Rochas Sedimentares</Button>
+      </div>
+    </Card>
+  );
+};
+
+const Phase17 = ({ onAction, onBack }) => {
+  const [answer, setAnswer] = useState("");
+  const check = () => {
+    const val = normalize(answer);
+    if (val === "chorume") onAction('success', 'Correto! O chorume é altamente tóxico se não for tratado num aterro sanitário.');
+    else if (val === "agrotoxico" || val === "agrotoxicos") onAction('success', 'Sim, os agrotóxicos também infiltram. Mas a dica foca no lixo comum.');
+    else onAction('error', 'É um líquido escuro e malcheiroso gerado pelo lixo em decomposição.');
+  };
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={17} title="Poluição Oculta" description="Quando chove sobre um lixão a céu aberto, a água mistura-se com a decomposição do lixo formando um líquido negro e tóxico que se infiltra no solo e polui o lençol freático. Qual o nome deste líquido?" />
+      <div className="flex flex-col gap-6 items-center">
+        <div className="w-full flex justify-center text-6xl">
+            🗑️ ➡️ 💧 ➡️ 💀
+        </div>
+        <input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && check()} placeholder="NOME DO LÍQUIDO TÓXICO" className="w-full bg-stone-950 border-2 border-indigo-500/50 rounded-xl p-4 text-center text-xl font-bold focus:border-indigo-500 outline-none transition-all uppercase" />
+        <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">INVESTIGAR CONTAMINANTE</Button>
+      </div>
+    </Card>
+  );
+};
+
+const Phase18 = ({ onAction, onBack }) => {
+  const [step, setStep] = useState(1);
+
+  const handleChoice = (isCorrect, msg) => {
+    if (isCorrect) {
+      if (step === 1) { onAction('success', 'Correto! Degraus seguram a água na montanha.'); setStep(2); }
+      else onAction('success', 'Correto! Árvores em linha barram o vento forte.');
+    } else {
+      onAction('error', msg);
+    }
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={18} title="Estratégias de Combate" description="Diferentes terrenos exigem diferentes defesas contra a erosão (desgaste do solo)." />
+      
+      {step === 1 ? (
+        <div className="flex flex-col gap-4 text-center">
+           <h4 className="font-black text-lg text-stone-200">Cenário 1: Uma montanha muito íngreme (inclinada).</h4>
+           <p className="text-stone-400 text-sm">Qual a melhor técnica para a água não descer lavando tudo?</p>
+           <Button variant="secondary" onClick={() => handleChoice(false, 'Isso é contra o vento.')}>Quebra-ventos</Button>
+           <Button variant="secondary" onClick={() => handleChoice(true, '')}>Terraceamento (Fazer degraus)</Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4 text-center">
+           <h4 className="font-black text-lg text-stone-200">Cenário 2: Uma planície reta com ventanias constantes.</h4>
+           <p className="text-stone-400 text-sm">Como evitar que a areia do solo seja soprada para longe?</p>
+           <Button variant="secondary" onClick={() => handleChoice(true, '')}>Quebra-ventos (Fileira de árvores)</Button>
+           <Button variant="secondary" onClick={() => handleChoice(false, 'Degraus não ajudam contra o vento no chão reto.')}>Terraceamento</Button>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const Phase19 = ({ onAction, onBack }) => {
+  const [values, setValues] = useState({ min: 25, org: 25, agu: 25, ar: 25 });
+  
+  const check = () => {
+    const sum = values.min + values.org + values.agu + values.ar;
+    if (sum !== 100) return onAction('error', 'A soma deve dar exatamente 100%!');
+    
+    // Tolerâncias aceitáveis para um solo ideal (45% mineral, 5% orgânico, 25% água, 25% ar)
+    if (values.min === 45 && values.org === 5 && values.agu === 25 && values.ar === 25) {
+        onAction('success', 'Gráfico perfeito do solo ideal!');
+    } else {
+        onAction('error', 'O solo ideal tem muito Mineral (45%), um pouco de matéria Orgânica (5%) e Ar e Água iguais (25%). Tente ajustar.');
+    }
+  };
+
+  return (
+    <Card className="animate-in slide-in-from-right border-indigo-500/50">
+      <PhaseHeader onBack={onBack} level={19} title="O Gráfico Perfeito" description="Ajuste as percentagens exatas do que compõe a 'fatia' de um solo ideal. A soma deve ser 100%." />
+      <div className="grid grid-cols-2 gap-4 mb-6">
+         {[
+           {id: 'min', l: 'Mineral', col: 'text-amber-500'}, 
+           {id: 'org', l: 'Orgânico', col: 'text-green-500'}, 
+           {id: 'agu', l: 'Água', col: 'text-blue-500'}, 
+           {id: 'ar', l: 'Ar', col: 'text-stone-300'}
+         ].map(v => (
+           <div key={v.id} className="bg-stone-900 p-4 rounded-xl flex flex-col items-center gap-2 border border-stone-800">
+             <span className={`font-black text-xs uppercase ${v.col}`}>{v.l}</span>
+             <div className="flex items-center gap-2">
+                <button onClick={() => setValues(p => ({...p, [v.id]: Math.max(0, p[v.id]-5)}))} className="w-8 h-8 bg-stone-800 rounded font-bold">-</button>
+                <span className="w-8 text-center font-black">{values[v.id]}</span>
+                <button onClick={() => setValues(p => ({...p, [v.id]: Math.min(100, p[v.id]+5)}))} className="w-8 h-8 bg-stone-800 rounded font-bold">+</button>
+             </div>
+           </div>
+         ))}
+      </div>
+      <div className="text-center mb-6">
+        <span className={`text-xs font-black uppercase ${values.min + values.org + values.agu + values.ar === 100 ? 'text-green-500' : 'text-red-500'}`}>
+          Total: {values.min + values.org + values.agu + values.ar}%
+        </span>
+      </div>
+      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">VALIDAR PROPORÇÕES</Button>
+    </Card>
+  );
+};
+
+const Phase20 = ({ onAction, onBack }) => {
+    const [pwd, setPwd] = useState(['', '', '']);
+    
+    const check = () => {
+        const p = pwd.join('').toUpperCase();
+        if (p === "SOLO") onAction('success', 'Cofre aberto! O solo é a base da nossa sobrevivência.');
+        else onAction('error', 'A senha está incorreta. Leia as dicas com atenção.');
+    };
+
+    return (
+        <Card className="animate-in slide-in-from-right border-indigo-500/50">
+            <PhaseHeader onBack={onBack} level={20} title="O Cofre da Terra" description="Resolva o enigma final respondendo às perguntas. Junte as primeiras letras das respostas para formar a Palavra-Passe Final (4 letras)." />
+            
+            <div className="space-y-4 mb-8 text-sm font-medium text-stone-300">
+                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
+                    1. A menor partícula de sedimento do solo chama-se... (Silte, Argila ou Areia?)
+                </div>
+                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
+                    2. A camada mais rica em matéria orgânica é o Horizonte... (O, A ou B?)
+                </div>
+                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
+                    3. O reservatório subterrâneo que a água da chuva alimenta chama-se... (Lençol Freático ou Aquífero?)
+                </div>
+                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
+                    4. A camada de restos de plantas e vida na superfície também é chamada de horizonte... (O, A ou C?)
+                </div>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-8">
+                {[0,1,2,3].map(i => (
+                    <input key={i} maxLength={1} value={pwd[i] || ''} onChange={e => {const n = [...pwd]; n[i] = e.target.value; setPwd(n);}} className="w-14 h-16 bg-stone-950 border-2 border-indigo-500 rounded-xl text-center text-3xl font-black text-white uppercase outline-none focus:bg-indigo-900/20" />
+                ))}
+            </div>
+            <Button onClick={check} variant="success" className="w-full py-5 text-lg">ABRIR O COFRE FINAL</Button>
+        </Card>
+    );
+};
+
+const ScreenVictory = ({ onRestart }) => (
+  <Card className="flex flex-col items-center text-center py-20 animate-in bounce-in border-indigo-500 shadow-indigo-500/20 shadow-2xl">
+    <Trophy className="w-32 h-32 text-indigo-500 mb-10 animate-bounce" />
+    <h2 className="text-5xl font-black text-white mb-4 uppercase tracking-tighter leading-none">Diplomado!</h2>
+    <div className="h-1 w-20 bg-indigo-600 mb-8 rounded-full" />
+    <p className="text-stone-300 text-base max-w-md mb-12 leading-relaxed font-bold">
+      Parabéns! Completaste com sucesso os 20 desafios. Provaste que conheces o valor, a formação e a fragilidade do nosso solo. Tu és o guardião da Terra!
+    </p>
+    <Button onClick={onRestart} className="px-20 py-6 text-xl shadow-2xl bg-indigo-600 hover:bg-indigo-500">VOLTAR AO INÍCIO</Button>
+  </Card>
+);
