@@ -1,775 +1,1004 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Mountain, Trophy, AlertCircle, CheckCircle2, 
-  MessageSquare, Shovel, Map, User, Pickaxe,
-  ChevronUp, ChevronDown, Move, ArrowLeft, Info,
-  Beaker, Microscope, Wind, Droplets, Thermometer,
-  Layers, Search, Database, Leaf, Bug, TreePine, Skull, Recycle
-} from 'lucide-react';
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mistérios do Solo</title>
+<style>
+:root{
+  --bg:#0c0a09; --card:#231f1d; --line:#3a3330;
+  --txt:#f5f5f4; --dim:#a8a29e; --amber:#f59e0b; --amber2:#fbbf24;
+  --indigo:#818cf8; --green:#22c55e; --red:#ef4444; --accent:var(--amber);
+  --r:18px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%; overflow-x:hidden;
+}
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.5;
+  background:
+    radial-gradient(60% 45% at 8% -8%, rgba(120,53,15,.55), transparent 70%),
+    radial-gradient(55% 45% at 105% 105%, rgba(49,46,129,.35), transparent 70%);
+}
+#fx{position:fixed;inset:0;z-index:90;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:680px;margin:0 auto;padding:16px 16px 48px}
 
-// --- UTILS ---
-const normalize = (str) => 
-  str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+header{display:flex;align-items:center;gap:12px;padding:12px 0 8px}
+.brand{
+  width:46px;height:46px;flex:0 0 auto;border-radius:14px;display:grid;place-items:center;
+  font-size:24px;background:linear-gradient(145deg,#b45309,#78350f);
+  border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 22px -10px #000
+}
+.brand.late{background:linear-gradient(145deg,#4f46e5,#312e81)}
+h1{font-size:18px;font-weight:900;letter-spacing:-.4px;text-transform:uppercase;line-height:1}
+.sub{font-size:9.5px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);margin-top:5px}
+.tools{margin-left:auto;display:flex;gap:6px}
+.icobtn{
+  width:36px;height:36px;border-radius:11px;border:1px solid var(--line);background:#00000030;
+  color:var(--dim);font-size:15px;cursor:pointer;display:grid;place-items:center;transition:.15s
+}
+.icobtn:hover{color:var(--txt);border-color:var(--accent)}
 
-// --- COMPONENTS ---
-const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
-  const baseStyle = "px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg";
-  const variants = {
-    primary: "bg-amber-600 hover:bg-amber-500 text-white",
-    secondary: "bg-stone-700 hover:bg-stone-600 text-stone-100",
-    success: "bg-green-600 hover:bg-green-500 text-white",
-    outline: "border-2 border-amber-600 text-amber-500 hover:bg-amber-600/10",
-    ghost: "text-stone-400 hover:text-white hover:bg-white/5",
-  };
-  return (
-    <button disabled={disabled} onClick={onClick} className={`${baseStyle} ${variants[variant]} ${className}`}>
-      {children}
-    </button>
-  );
+.hud{display:flex;gap:8px;margin:10px 0 12px}
+.stat{
+  flex:1;background:#00000040;border:1px solid var(--line);border-radius:14px;
+  padding:8px 10px;text-align:center;min-width:0
+}
+.stat b{display:block;font-size:17px;font-weight:900;line-height:1.1}
+.stat span{font-size:8.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#78716c}
+.bar{height:7px;background:#00000055;border:1px solid var(--line);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--amber),var(--amber2));transition:width .6s cubic-bezier(.2,.9,.2,1)}
+body.late .bar i{background:linear-gradient(90deg,#6366f1,var(--indigo))}
+
+.card{
+  background:linear-gradient(180deg,rgba(41,37,36,.92),rgba(28,25,23,.92));
+  border:1px solid var(--line);border-radius:var(--r);padding:18px;
+  box-shadow:0 26px 60px -30px #000; backdrop-filter:blur(6px)
+}
+.card.late{border-color:rgba(129,140,248,.4)}
+.anim{animation:pop .35s cubic-bezier(.2,.9,.2,1)}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.shake{animation:shake .4s}
+@keyframes shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-7px)}}
+
+.phead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tag{
+  font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--accent);background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28);
+  padding:4px 9px;border-radius:99px;white-space:nowrap
+}
+body.late .tag{color:var(--indigo);background:rgba(129,140,248,.12);border-color:rgba(129,140,248,.3)}
+.ghost{
+  margin-left:auto;background:none;border:0;color:#78716c;font-size:10px;font-weight:800;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:6px
+}
+.ghost:hover{color:var(--txt)}
+h2.ptitle{font-size:24px;font-weight:900;letter-spacing:-.8px;text-transform:uppercase;line-height:1.05;margin-bottom:12px}
+.brief{
+  background:#00000045;border-left:4px solid var(--accent);border-radius:0 12px 12px 0;
+  padding:12px 14px;font-size:13.5px;line-height:1.6;color:#d6d3d1
+}
+body.late .brief{border-left-color:var(--indigo)}
+.prompt{font-size:15px;font-weight:700;line-height:1.5;margin:16px 0 12px;text-align:center}
+.steps{display:flex;gap:5px;justify-content:center;margin:14px 0 2px}
+.steps i{width:22px;height:4px;border-radius:99px;background:#44403c}
+.steps i.on{background:var(--accent)}
+
+.btn{
+  width:100%;border:0;border-radius:14px;padding:15px 18px;font-size:14px;font-weight:900;
+  letter-spacing:.04em;text-transform:uppercase;cursor:pointer;color:#fff;
+  background:linear-gradient(180deg,var(--amber),#d97706);box-shadow:0 10px 24px -12px var(--amber);
+  transition:transform .12s, filter .15s
+}
+.btn:hover{filter:brightness(1.1)} .btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.35;cursor:not-allowed;filter:none;box-shadow:none}
+.btn.lateb{background:linear-gradient(180deg,#6366f1,#4338ca);box-shadow:0 10px 24px -12px #6366f1}
+.btn.gr{background:linear-gradient(180deg,#22c55e,#15803d);box-shadow:0 10px 24px -12px #22c55e}
+.btn.gh{background:#00000040;border:1px solid var(--line);color:var(--dim);box-shadow:none}
+.row{display:flex;gap:10px;margin-top:14px}
+.row .btn{flex:1}
+
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{
+  display:flex;align-items:center;gap:12px;text-align:left;width:100%;cursor:pointer;
+  background:#1917169c;border:2px solid #3a3330;border-radius:14px;padding:13px 14px;
+  color:var(--txt);font-size:13.5px;font-weight:700;line-height:1.35;transition:.15s
+}
+.opt:hover{border-color:var(--accent);transform:translateX(3px)}
+.opt.on{border-color:var(--accent);background:rgba(245,158,11,.14)}
+body.late .opt.on{border-color:var(--indigo);background:rgba(129,140,248,.14)}
+.opt.ok{border-color:var(--green);background:rgba(34,197,94,.15)}
+.opt.no{border-color:var(--red);background:rgba(239,68,68,.12);opacity:.65}
+.opt .k{
+  flex:0 0 auto;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;
+  background:#00000055;font-size:11px;font-weight:900;color:#a8a29e
+}
+.opt.on .k{background:var(--accent);color:#1c1917}
+.opt em{display:block;font-size:11px;font-weight:600;font-style:normal;color:#a8a29e;margin-top:3px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tile{
+  cursor:pointer;background:#19171699;border:2px solid #3a3330;border-radius:14px;
+  padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  color:var(--txt);transition:.15s
+}
+.tile span.e{font-size:26px;line-height:1}
+.tile span.l{font-size:9.5px;font-weight:900;text-transform:uppercase;text-align:center;letter-spacing:.03em}
+.tile.on{border-color:var(--accent);background:rgba(245,158,11,.16);transform:scale(1.04)}
+.tile:hover{border-color:#57534e}
+
+.dig{display:flex;flex-direction:column;gap:3px;background:#000;padding:5px;border-radius:14px;border:3px solid #292524}
+.dig button{
+  height:50px;border:0;border-radius:7px;cursor:pointer;color:#ffffff7a;position:relative;
+  font-size:10.5px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;transition:.3s
+}
+.dig button:hover{filter:brightness(1.18)}
+.dig button.gone{color:transparent;background:#0a0a0a !important;box-shadow:inset 0 3px 14px #000;height:26px}
+.dig button.gone::after{content:"\26CF";color:#44403c;font-size:14px;position:absolute;inset:0;display:grid;place-items:center}
+.speech{
+  display:flex;gap:10px;align-items:center;background:#00000055;border:1px solid var(--line);
+  border-radius:14px;padding:11px 13px;margin-bottom:12px;font-size:12.5px;line-height:1.45;color:#fde68a
+}
+.speech .who{font-size:24px}
+
+.sortlist{display:flex;flex-direction:column;gap:8px}
+.sortitem{
+  display:flex;align-items:center;gap:10px;background:#19171699;border:2px solid #3a3330;
+  border-radius:13px;padding:11px 12px
+}
+.sortitem .dot{width:12px;height:12px;border-radius:99px;flex:0 0 auto}
+.sortitem .nm{font-size:12.5px;font-weight:900;text-transform:uppercase;letter-spacing:.02em}
+.sortitem .ar{margin-left:auto;display:flex;gap:5px}
+.sortitem .ar button{
+  width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:#00000050;
+  color:var(--accent);font-size:13px;cursor:pointer
+}
+.sortitem .ar button[disabled]{opacity:.2;cursor:default}
+.hintline{font-size:10.5px;color:#78716c;text-align:center;margin-top:10px;letter-spacing:.06em;text-transform:uppercase;font-weight:800}
+
+.gauge{background:#00000050;border:1px solid var(--line);border-radius:18px;padding:18px;text-align:center}
+.gauge .big{font-size:46px;font-weight:900;letter-spacing:-2px;line-height:1}
+.gauge .lbl{font-size:9px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#78716c}
+.gauge .st{font-size:12px;font-weight:900;text-transform:uppercase;margin-top:4px}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:99px;margin:16px 0;
+  background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e,#38bdf8,#818cf8);cursor:pointer
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:28px;height:28px;border-radius:99px;background:#fff;
+  border:4px solid var(--accent);box-shadow:0 4px 12px #000;cursor:grab
+}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:99px;background:#fff;border:4px solid var(--accent)}
+.mix{display:flex;gap:10px;height:150px;margin-bottom:4px}
+.mixcol{
+  flex:1;position:relative;display:flex;flex-direction:column;justify-content:flex-end;
+  border:3px solid #57534e;border-radius:0 0 14px 14px;overflow:hidden;background:#00000050
+}
+.mixcol i{display:block;width:100%;transition:height .3s}
+.mixcol span{position:absolute;inset:0;display:grid;place-items:center;font-size:17px;font-weight:900;text-shadow:0 2px 6px #000}
+.nums{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.num{background:#00000050;border:1px solid var(--line);border-radius:14px;padding:11px;text-align:center}
+.num .l{font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.1em}
+.num .c{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:7px}
+.num .c button{width:32px;height:32px;border-radius:9px;border:1px solid var(--line);background:#00000060;color:var(--txt);font-size:17px;font-weight:900;cursor:pointer}
+.num .c b{width:44px;font-size:17px;font-weight:900}
+.total{text-align:center;font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;margin:12px 0}
+
+input.txt{
+  width:100%;background:#00000066;border:2px solid rgba(245,158,11,.5);border-radius:14px;
+  padding:15px;text-align:center;font-size:17px;font-weight:900;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--txt);font-family:inherit;outline:none
+}
+input.txt:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(245,158,11,.12)}
+.code{display:flex;gap:9px;justify-content:center;margin:6px 0 4px}
+.code input{
+  width:54px;height:64px;background:#000000aa;border:2px solid var(--indigo);border-radius:14px;
+  text-align:center;font-size:28px;font-weight:900;text-transform:uppercase;color:#fff;
+  font-family:inherit;outline:none
+}
+.code input:focus{background:rgba(99,102,241,.18);box-shadow:0 0 0 4px rgba(99,102,241,.16)}
+.clues{display:flex;flex-direction:column;gap:8px;margin:4px 0 14px}
+.clue{background:#00000050;border-left:4px solid var(--indigo);border-radius:0 11px 11px 0;padding:10px 12px;font-size:12px;line-height:1.45;color:#d6d3d1}
+.clue b{color:var(--indigo)}
+
+.scene{
+  position:relative;height:160px;border-radius:16px;overflow:hidden;border:3px solid #292524;
+  background:linear-gradient(#0f172a,#1e293b);margin-bottom:6px;display:flex;flex-direction:column;justify-content:flex-end
+}
+.scene .water{height:52%;background:linear-gradient(rgba(37,99,235,.6),rgba(29,78,216,.6));display:grid;place-items:center;font-size:10px;font-weight:900;letter-spacing:.3em;color:#bfdbfe;position:relative}
+.scene .mud{position:absolute;inset:auto 0 0 0;height:45%;background:rgba(120,53,15,.8)}
+.scene .banks{position:absolute;inset:0 0 auto 0;display:flex;justify-content:space-between;padding:10px}
+.scene .banks span{font-size:34px;filter:drop-shadow(0 4px 6px #000)}
+.slots{display:flex;gap:8px;margin-bottom:6px}
+.slot{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.slot .yr{font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#78716c}
+.slot .box{
+  width:100%;height:76px;border:2px dashed #44403c;border-radius:13px;display:grid;place-items:center;
+  font-size:32px;background:#00000040
+}
+.slot .box.full{border-style:solid;border-color:var(--green);background:rgba(34,197,94,.08)}
+.slot .pick{display:flex;gap:5px;width:100%}
+.slot .pick button{flex:1;border:1px solid var(--line);background:#00000050;border-radius:9px;padding:6px 0;font-size:17px;cursor:pointer}
+.slot .pick button:hover{background:rgba(245,158,11,.2)}
+
+#toast{
+  position:fixed;left:50%;top:16px;transform:translate(-50%,-160%);z-index:120;
+  max-width:min(440px,92vw);padding:13px 20px;border-radius:18px;text-align:center;
+  box-shadow:0 20px 50px -18px #000;transition:transform .35s cubic-bezier(.2,1.2,.3,1)
+}
+#toast.show{transform:translate(-50%,0)}
+#toast.ok{background:linear-gradient(180deg,#22c55e,#15803d)}
+#toast.no{background:linear-gradient(180deg,#ef4444,#b91c1c)}
+#toast b{display:block;font-size:13px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+#toast span{display:block;font-size:12.5px;line-height:1.4;margin-top:3px;color:rgba(255,255,255,.92)}
+
+.center{text-align:center}
+.hero{font-size:74px;line-height:1;margin-bottom:14px;filter:drop-shadow(0 12px 20px #000)}
+.big-title{font-size:38px;font-weight:900;letter-spacing:-2px;text-transform:uppercase;line-height:1}
+.big-title em{color:var(--accent);font-style:normal;display:block}
+.lead{font-size:13.5px;line-height:1.7;color:var(--dim);max-width:420px;margin:16px auto 22px}
+.pills{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:22px}
+.pill{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);background:#00000050;border:1px solid var(--line);padding:6px 11px;border-radius:99px}
+.stars{font-size:30px;letter-spacing:5px;margin:6px 0 10px}
+.fact{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:14px;padding:13px 15px;font-size:12.5px;line-height:1.6;color:#d1fae5;text-align:left;margin:14px 0}
+.fact b{color:var(--green);display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
+.map{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:4px}
+.node{
+  aspect-ratio:1;border-radius:13px;border:1px solid var(--line);background:#00000050;cursor:pointer;
+  color:var(--txt);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:900
+}
+.node b{font-size:15px}
+.node u{font-size:8px;text-decoration:none;color:var(--amber2);letter-spacing:1px}
+.node.done{border-color:rgba(34,197,94,.5);background:rgba(34,197,94,.1)}
+.node.now{border-color:var(--accent);background:rgba(245,158,11,.18);box-shadow:0 0 0 3px rgba(245,158,11,.14)}
+.node.lock{opacity:.3;cursor:not-allowed}
+.sec{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:#78716c;margin:16px 0 8px}
+footer{text-align:center;font-size:10px;color:#57534e;margin-top:22px;letter-spacing:.08em}
+@media (max-width:420px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .big-title{font-size:31px}
+  .code input{width:46px;height:56px;font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<div id="toast"><b></b><span></span></div>
+<div class="wrap">
+  <header>
+    <div class="brand" id="brand">&#9968;</div>
+    <div>
+      <h1>Mistérios do Solo</h1>
+      <div class="sub" id="sub">Expedição Geológica</div>
+    </div>
+    <div class="tools">
+      <button class="icobtn" id="mute" title="Ligar/desligar som">&#128266;</button>
+      <button class="icobtn" id="mapbtn" title="Mapa das fases">&#128506;</button>
+    </div>
+  </header>
+  <div class="hud" id="hud"></div>
+  <div class="bar"><i id="barfill" style="width:0%"></i></div>
+  <main id="app"></main>
+  <footer>20 fases &middot; Ciências &middot; 6º ano</footer>
+</div>
+<script>
+"use strict";
+
+/* ===================== utilitários ===================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const norm = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim().replace(/[-\s]+/g, " ");
+const KEYS = "ABCDEFGH";
+
+/* ===================== som (WebAudio, sem arquivos) ===================== */
+let actx = null;
+const beep = (freq, dur = 0.09, type = "square", gain = 0.05) => {
+  if (S.mute) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+    o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + dur);
+  } catch (e) { /* som é opcional */ }
+};
+const sfx = {
+  tap:  () => beep(520, .05, "triangle", .04),
+  dig:  () => beep(120 + Math.random() * 60, .12, "sawtooth", .05),
+  ok:   () => { beep(660, .1, "triangle", .06); setTimeout(() => beep(880, .14, "triangle", .06), 90); },
+  no:   () => { beep(200, .16, "square", .05); setTimeout(() => beep(150, .2, "square", .05), 120); },
+  win:  () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .2, "triangle", .06), i * 130))
 };
 
-const Card = ({ children, className = "" }) => (
-  <div className={`bg-stone-800/80 backdrop-blur-sm border border-stone-700 p-6 rounded-2xl shadow-xl ${className}`}>
-    {children}
-  </div>
-);
-
-const FeedbackOverlay = ({ type, message }) => (
-  <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-2 px-8 py-4 rounded-3xl shadow-2xl animate-in slide-in-from-top-10 duration-300 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-    <div className="flex items-center gap-3">
-        {type === 'success' ? <CheckCircle2 className="w-8 h-8" /> : <AlertCircle className="w-8 h-8" />}
-        <span className="font-bold text-white text-lg text-center uppercase tracking-tight">{type === 'success' ? 'Sucesso!' : 'Atenção!'}</span>
-    </div>
-    <span className="text-white/90 text-sm font-medium text-center">{message}</span>
-  </div>
-);
-
-const PhaseHeader = ({ title, level, description, onBack }) => (
-  <div className="mb-6">
-    <div className="flex items-center justify-between mb-2">
-      <Button variant="ghost" onClick={onBack} className="px-2 py-1 text-[10px]">
-        <ArrowLeft size={12} /> RETORNAR
-      </Button>
-      <span className="text-amber-500 font-black text-[10px] uppercase tracking-[0.2em] bg-amber-500/10 px-3 py-1 rounded-full">Fase {level}/20</span>
-    </div>
-    <h3 className="text-2xl font-black uppercase text-white mb-3 tracking-tighter leading-none">{title}</h3>
-    <div className="bg-stone-900/50 border-l-4 border-amber-600 p-4 rounded-r-xl">
-      <p className="text-stone-300 text-xs leading-relaxed font-medium">
-        {description}
-      </p>
-    </div>
-  </div>
-);
-
-// --- MAIN APP ---
-export default function App() {
-  const [phase, setPhase] = useState(0);
-  const [feedback, setFeedback] = useState(null);
-  const [progress, setProgress] = useState(0);
-
-  const triggerFeedback = useCallback((type, message) => {
-    setFeedback({ type, message });
-    if (type === 'success') {
-      setTimeout(() => {
-        setPhase(p => p + 1);
-        setFeedback(null);
-      }, 2500);
-    } else {
-      setTimeout(() => setFeedback(null), 3000);
-    }
-  }, []);
-
-  useEffect(() => {
-    setProgress((phase / 20) * 100);
-  }, [phase]);
-
-  const goBack = () => setPhase(prev => Math.max(0, prev - 1));
-
-  return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 font-sans p-4 selection:bg-amber-500/30 selection:text-white">
-      <div className="fixed inset-0 pointer-events-none opacity-20 overflow-hidden">
-         <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-amber-900 rounded-full blur-[150px] animate-pulse" />
-         <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] bg-stone-800 rounded-full blur-[150px]" />
-      </div>
-
-      {feedback && <FeedbackOverlay type={feedback.type} message={feedback.message} />}
-
-      <div className="relative z-10 max-w-2xl mx-auto py-8">
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className={`p-4 rounded-2xl shadow-xl border ${phase > 10 ? 'bg-gradient-to-br from-indigo-600 to-indigo-800 border-indigo-500/50' : 'bg-amber-600 border-amber-500'}`}>
-              {phase > 10 ? <Trophy className="w-7 h-7 text-white" /> : <Mountain className="w-7 h-7 text-white" />}
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-black text-stone-100 uppercase leading-none tracking-tighter">Mistérios do Solo</h1>
-              <p className={`text-[10px] font-bold uppercase tracking-[0.3em] ${phase > 10 ? 'text-indigo-400' : 'text-amber-500'}`}>
-                {phase > 10 ? 'Olimpíada de Ciências (6º Ano)' : 'Jornada Fundamental'}
-              </p>
-            </div>
-          </div>
-          
-          {phase > 0 && phase <= 20 && (
-            <div className="hidden sm:flex bg-stone-900/80 p-4 rounded-2xl border border-stone-700 items-center gap-4">
-              <div className="text-right">
-                <p className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Progresso Total</p>
-                <div className={`text-lg font-black ${phase > 10 ? 'text-indigo-400' : 'text-amber-500'}`}>{phase}/20</div>
-              </div>
-            </div>
-          )}
-        </header>
-
-        {phase > 0 && phase <= 20 && (
-            <div className="w-full h-1.5 bg-stone-800 rounded-full mb-8 overflow-hidden">
-                <div className={`h-full transition-all duration-700 ${phase > 10 ? 'bg-indigo-500' : 'bg-amber-500'}`} style={{ width: `${progress}%` }} />
-            </div>
-        )}
-
-        <main className="min-h-[600px]">
-          {phase === 0 && <ScreenWelcome onStart={() => setPhase(1)} />}
-          
-          {/* Fases Básicas (1 a 10) */}
-          {phase === 1 && <Phase1 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 2 && <Phase2 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 3 && <Phase3 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 4 && <Phase4 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 5 && <Phase5 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 6 && <Phase6 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 7 && <Phase7 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 8 && <Phase8 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 9 && <Phase9 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 10 && <Phase10 onAction={triggerFeedback} onBack={goBack} />}
-          
-          {/* Fases Desafio 6º Ano (11 a 20) */}
-          {phase === 11 && <Phase11 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 12 && <Phase12 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 13 && <Phase13 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 14 && <Phase14 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 15 && <Phase15 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 16 && <Phase16 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 17 && <Phase17 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 18 && <Phase18 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 19 && <Phase19 onAction={triggerFeedback} onBack={goBack} />}
-          {phase === 20 && <Phase20 onAction={triggerFeedback} onBack={goBack} />}
-          
-          {phase === 21 && <ScreenVictory onRestart={() => setPhase(0)} />}
-        </main>
-      </div>
-    </div>
-  );
+/* ===================== confete ===================== */
+const cv = $("#fx"), cx = cv.getContext("2d");
+let parts = [], raf = 0;
+const fit = () => { cv.width = innerWidth; cv.height = innerHeight; };
+addEventListener("resize", fit); fit();
+function burst(n = 70, colors = ["#f59e0b", "#fbbf24", "#22c55e", "#818cf8", "#fff"]) {
+  for (let i = 0; i < n; i++) parts.push({
+    x: innerWidth / 2 + (Math.random() - .5) * 160, y: innerHeight * .38,
+    vx: (Math.random() - .5) * 11, vy: -Math.random() * 13 - 3,
+    s: 3 + Math.random() * 6, c: colors[i % colors.length], r: Math.random() * 6, vr: (Math.random() - .5) * .4
+  });
+  if (!raf) raf = requestAnimationFrame(tick);
+}
+function tick() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts = parts.filter(p => p.y < innerHeight + 40);
+  parts.forEach(p => {
+    p.vy += .32; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r);
+    cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 1.6); cx.restore();
+  });
+  raf = parts.length ? requestAnimationFrame(tick) : (cx.clearRect(0, 0, cv.width, cv.height), 0);
 }
 
-// --- SCREENS ---
+/* ===================== conteúdo das 20 fases ===================== */
+/* Cada fase = lista de etapas. Tipos: quiz, multi, order, slider, text, dig, mix, crop, nums, code */
+const PHASES = [
+{
+  t: "Origem Primordial", ico: "&#9935;",
+  brief: "Todo solo nasce da lenta destruição de uma rocha. Cave camada por camada até bater no fundo e descubra o nome do material que dá origem a tudo.",
+  fact: "Formar 1 cm de solo pode levar de 100 a 400 anos. É por isso que solo perdido por erosão não volta na nossa escala de tempo.",
+  steps: [
+    { type: "dig", prompt: "Clique nas camadas de cima para baixo para escavar o perfil.", layers: [
+      { l: "Superfície", c: "#14532d", say: "Muitas folhas, raízes e bichinhos aqui em cima!" },
+      { l: "Húmus", c: "#1c1917", say: "Ficou escuro e cheiroso: matéria orgânica decomposta." },
+      { l: "Minerais", c: "#78350f", say: "Agora dominam os minerais. A luz já não chega aqui." },
+      { l: "Fragmentos", c: "#57534e", say: "Comecei a encontrar pedaços de rocha quebrada..." },
+      { l: "Base Sólida", c: "#78716c", say: "Bati numa parede de pedra inteira. Fim da escavação!" }
+    ]},
+    { type: "text", prompt: "Essa pedra inteira no fundo, que se desfaz e forma o solo acima dela, é a…",
+      accept: ["rocha mae", "rocha matriz", "rochamae", "rocha mãe"], ph: "Nome da rocha do fundo",
+      hint: "São duas palavras: rocha + a que cuida dos filhos." }
+  ]
+},
+{
+  t: "Receita da Terra", ico: "&#129386;",
+  brief: "O solo é uma mistura de partes sólidas, líquidas e gasosas. Escolha os 4 componentes naturais de um solo vivo.",
+  fact: "Num solo saudável, quase metade do volume é espaço vazio — poros ocupados por ar e água. Sem eles, as raízes sufocam.",
+  steps: [{ type: "multi", prompt: "Selecione exatamente 4 componentes.", need: 4, tiles: [
+    { l: "Minerais", e: "&#128142;", ok: 1 }, { l: "M. orgânica", e: "&#127810;", ok: 1 },
+    { l: "Plástico", e: "&#129380;" }, { l: "Água", e: "&#128167;", ok: 1 },
+    { l: "Vidro", e: "&#129514;" }, { l: "Ar", e: "&#128168;", ok: 1 },
+    { l: "Metal", e: "&#9881;" }, { l: "Concreto", e: "&#129521;" }, { l: "Lixo", e: "&#128223;" }
+  ], hint: "Três são sólidos/naturais e dois preenchem os poros: um você bebe, o outro você respira." }]
+},
+{
+  t: "Forças da Natureza", ico: "&#127786;",
+  brief: "Intemperismo é a quebra das rochas. No deserto, o dia ferve e a noite congela: a rocha incha, contrai e racha sozinha.",
+  fact: "Água que congela dentro de uma fenda aumenta de volume e funciona como uma cunha — o mesmo efeito que estoura encanamentos no inverno.",
+  steps: [{ type: "quiz", prompt: "Que tipo de intemperismo quebra a rocha pela variação de temperatura?", opts: [
+    { l: "Intemperismo físico", d: "Quebra mecânica, sem mudar a composição.", ok: 1, why: "A rocha racha por dilatação e contração." },
+    { l: "Intemperismo químico", d: "A água e o oxigênio dissolvem minerais.", why: "No químico a rocha muda de composição, não só de forma." },
+    { l: "Intemperismo biológico", d: "Raízes e seres vivos rompem a rocha.", why: "Aqui quem quebra é a vida, não a temperatura." }
+  ]}]
+},
+{
+  t: "Granulometria", ico: "&#128269;",
+  brief: "A textura do solo depende do tamanho dos grãos. Um deles é tão fino que gruda, molda e segura água.",
+  fact: "Um punhado de argila tem área de superfície interna maior que uma quadra de esportes — por isso ela retém tanta água e nutrientes.",
+  steps: [{ type: "quiz", prompt: "Qual fração tem as MENORES partículas (menos de 0,002 mm)?", opts: [
+    { l: "Areia", d: "2 mm a 0,05 mm", why: "Areia é a maior das três; você vê os grãos." },
+    { l: "Silte", d: "0,05 mm a 0,002 mm", why: "Quase lá: o silte é intermediário." },
+    { l: "Argila", d: "menor que 0,002 mm", ok: 1, why: "É a menor partícula e dá a plasticidade do solo." }
+  ]}]
+},
+{
+  t: "Perfil do Solo", ico: "&#129704;",
+  brief: "Ao cortar o terreno verticalmente aparecem faixas chamadas horizontes. Coloque-os na ordem da superfície até a rocha.",
+  fact: "Geólogos leem um perfil de solo como páginas de um livro: cada horizonte registra o clima e a vida daquele lugar.",
+  steps: [{ type: "order", prompt: "Ordene do topo (superfície) para o fundo (rocha).", correct: ["O", "A", "B", "C"], items: [
+    { id: "C", n: "Horizonte C · rocha fragmentada", c: "#78716c" },
+    { id: "O", n: "Horizonte O · folhas e restos", c: "#14532d" },
+    { id: "A", n: "Horizonte A · húmus + minerais", c: "#1c1917" },
+    { id: "B", n: "Horizonte B · acúmulo de argila", c: "#78350f" }
+  ], hint: "Comece pelo que você pisa (folhas) e termine na pedra." }]
+},
+{
+  t: "Química da Fertilidade", ico: "&#129514;",
+  brief: "O pH mede acidez. Fora da faixa certa, o nutriente existe no solo mas a planta não consegue absorver.",
+  fact: "Agricultores corrigem solo ácido com calagem — calcário moído que eleva o pH e libera nutrientes travados.",
+  steps: [{ type: "slider", prompt: "Ajuste o sensor para a faixa ideal da maioria das lavouras.", min: 0, max: 14, step: .5, start: 3,
+    lo: 6, hi: 7, unit: "", lbl: "Indicador de acidez",
+    read: v => v < 6.5 ? "Ácido" : v <= 7 ? "Ideal / neutro" : "Alcalino",
+    lowMsg: "Ácido demais: o alumínio fica solúvel e queima as raízes.",
+    highMsg: "Alcalino demais: ferro e fósforo travam e a planta amarela.",
+    hint: "Entre 6 e 7 — levemente ácido a neutro." }]
+},
+{
+  t: "Solos do Brasil", ico: "&#127758;",
+  brief: "A Terra Roxa do Sul e Sudeste vem do basalto e é muito fértil. Sua cor vermelha entrega quem está lá dentro.",
+  fact: "O nome Terra Roxa vem de imigrantes italianos: rosso significa vermelho. Virou roxa no ouvido brasileiro.",
+  steps: [{ type: "quiz", prompt: "Qual mineral, ao oxidar, dá o tom avermelhado a esse solo?", cols: 2, opts: [
+    { l: "Óxido de ferro", e: "&#129522;", ok: 1, why: "É ferrugem: ferro + oxigênio = vermelho." },
+    { l: "Silício puro", e: "&#128142;", why: "O silício é claro, quase transparente." },
+    { l: "Cálcio", e: "&#128026;", why: "Cálcio clareia o solo, não avermelha." },
+    { l: "Enxofre", e: "&#127755;", why: "Enxofre é amarelo e não domina esse solo." }
+  ]}]
+},
+{
+  t: "Conservação", ico: "&#127806;",
+  brief: "Em terreno inclinado, a chuva desce ganhando velocidade e arrasta o solo. Plantar em curvas de nível é a defesa clássica.",
+  fact: "Água que desce duas vezes mais rápido carrega muito mais terra: por isso barrar a velocidade importa mais do que barrar o volume.",
+  steps: [{ type: "quiz", prompt: "Para que servem, tecnicamente, as curvas de nível?", opts: [
+    { l: "Reduzir a velocidade do escoamento da água", ok: 1, why: "Menos velocidade, menos força para arrastar o solo." },
+    { l: "Aumentar a velocidade da drenagem", why: "Isso agravaria a erosão em vez de conter." },
+    { l: "Deixar o terreno mais bonito de avião", why: "O efeito visual é consequência, não a função." }
+  ]}]
+},
+{
+  t: "O Paradoxo Físico", ico: "&#128167;",
+  brief: "Um solo pode ter MUITOS espaços vazios e ainda assim quase não deixar a água passar — porque os poros são minúsculos.",
+  fact: "Porosidade é quanto vazio existe; permeabilidade é quão fácil a água atravessa. Argila tem muita da primeira e pouca da segunda.",
+  steps: [{ type: "quiz", prompt: "Qual solo tem alta porosidade e baixa permeabilidade?", cols: 2, opts: [
+    { l: "Arenoso", e: "&#127964;", why: "A areia tem poros grandes: a água escorre rápido." },
+    { l: "Argiloso", e: "&#129386;", ok: 1, why: "Os microporos seguram a água por capilaridade." }
+  ]}]
+},
+{
+  t: "Sustentabilidade", ico: "&#9851;",
+  brief: "Último desafio dos fundamentos: escolha as 3 práticas que conservam a estrutura e a vida do solo.",
+  fact: "No plantio direto, a palha da safra anterior fica no chão: protege do impacto da chuva, guarda umidade e alimenta os micro-organismos.",
+  steps: [{ type: "multi", prompt: "Selecione exatamente 3 práticas que protegem o solo.", need: 3, list: 1, tiles: [
+    { l: "Rotação de culturas", ok: 1 }, { l: "Queimada para limpar o terreno" },
+    { l: "Plantio direto (sem revolver)", ok: 1 }, { l: "Adubação verde", ok: 1 },
+    { l: "Arar o solo várias vezes ao ano" }
+  ], hint: "Fogo e revirar demais destroem a matéria orgânica e a estrutura." }]
+},
+{
+  t: "O Ciclo das Rochas", ico: "&#127756;", late: 1,
+  brief: "A rocha-mãe pode ter três histórias diferentes. Leia cada evento geológico e classifique a rocha formada.",
+  fact: "As três famílias se reciclam: uma rocha ígnea pode virar sedimento, depois rocha sedimentar, depois metamórfica — e derreter para começar de novo.",
+  steps: [
+    { type: "quiz", prompt: "A lava escorreu de um vulcão e esfriou rápido na superfície, formando basalto. Que rocha é essa?", opts: [
+      { l: "Ígnea (magmática)", e: "&#127755;", ok: 1, why: "Magma que esfria forma rocha ígnea." },
+      { l: "Sedimentar", e: "&#127964;", why: "Sedimentar vem de grãos acumulados, não de lava." },
+      { l: "Metamórfica", e: "&#128142;", why: "Metamórfica exige pressão e calor sobre outra rocha." }] },
+    { type: "quiz", prompt: "Grãos de areia foram levados pela água por milhões de anos, depositados e cimentados no fundo de um lago.", opts: [
+      { l: "Ígnea (magmática)", e: "&#127755;", why: "Não houve magma nesse processo." },
+      { l: "Sedimentar", e: "&#127964;", ok: 1, why: "Sedimentos depositados e cimentados = rocha sedimentar." },
+      { l: "Metamórfica", e: "&#128142;", why: "Faltou o calor e a pressão extrema." }] },
+    { type: "quiz", prompt: "Uma rocha antiga afundou na crosta; o calor e o peso das montanhas mudaram toda a sua estrutura sem derretê-la.", opts: [
+      { l: "Ígnea (magmática)", e: "&#127755;", why: "Se derretesse virava ígnea — mas ela não derreteu." },
+      { l: "Sedimentar", e: "&#127964;", why: "Não houve deposição de grãos." },
+      { l: "Metamórfica", e: "&#128142;", ok: 1, why: "Calor + pressão transformando a rocha = metamorfismo." }] }
+  ]
+},
+{
+  t: "O Equilíbrio Físico", ico: "&#9878;", late: 1,
+  brief: "A planta quer um solo que segure água sem encharcar. Misture areia e argila até achar o ponto do solo franco.",
+  fact: "O solo franco é o meio-termo campeão da agricultura: drena o excesso, guarda o suficiente e ainda deixa ar para as raízes.",
+  steps: [{ type: "mix", prompt: "Regule a mistura e teste a permeabilidade.", lo: 40, hi: 60, start: 85,
+    lowMsg: "Muita argila: a água empoça e as raízes apodrecem.",
+    highMsg: "Muita areia: a água drena rápido demais e a planta seca.",
+    hint: "Procure algo perto de meio a meio." }]
+},
+{
+  t: "O Engenheiro Subterrâneo", ico: "&#129714;", late: 1,
+  brief: "Alguns animais são arados naturais: abrem galerias, misturam camadas e ainda fabricam adubo.",
+  fact: "Minhocas podem processar toneladas de terra por hectare a cada ano. Darwin escreveu um livro inteiro só sobre isso.",
+  steps: [
+    { type: "quiz", prompt: "Qual animal cava galerias e melhora a aeração do solo?", cols: 2, opts: [
+      { l: "Minhoca", e: "&#129714;", ok: 1, why: "Os túneis deixam ar e água entrarem." },
+      { l: "Formiga", e: "&#128028;", why: "Ajuda um pouco, mas não é o arado natural principal." },
+      { l: "Lesma", e: "&#128012;", why: "Ela anda por cima, não cava galerias." },
+      { l: "Centopeia", e: "&#128027;", why: "Predadora do solo, não escavadora de galerias." }] },
+    { type: "text", prompt: "A minhoca come terra e restos de plantas. O material escuro e fértil que ela devolve ao solo é o…",
+      accept: ["humus", "húmus", "humo"], ph: "Nome do adubo natural", hint: "Cinco letras, começa com H." }
+  ]
+},
+{
+  t: "Ameaça ao Rio", ico: "&#127794;", late: 1,
+  brief: "Sem vegetação na margem, a chuva leva a terra para dentro do rio. O leito sobe, a água espalha e o rio morre aos poucos.",
+  fact: "Esse entupimento do leito chama-se assoreamento. É uma das principais causas de enchentes em cidades cortadas por rios.",
+  steps: [
+    { type: "quiz", scene: "river", prompt: "Qual vegetação deve ser mantida (ou restaurada) nas margens dos rios?", opts: [
+      { l: "Mata ciliar", ok: 1, why: "As raízes das árvores costuram o barranco no lugar." },
+      { l: "Pastagem", why: "A raiz do pasto é curta e não segura o barranco." },
+      { l: "Solo exposto com pedras soltas", why: "Sem raiz viva, a chuva leva tudo para o rio." }] },
+    { type: "quiz", prompt: "E por que essa vegetação evita o assoreamento?", opts: [
+      { l: "Porque as raízes seguram o solo da margem", ok: 1, why: "Solo preso não vai para o fundo do rio." },
+      { l: "Porque as árvores bebem toda a chuva", why: "Elas absorvem parte, mas o efeito principal é mecânico." },
+      { l: "Porque a sombra congela a água", why: "A sombra ajuda na temperatura, não na erosão." }] }
+  ]
+},
+{
+  t: "Rotação de Culturas", ico: "&#127805;", late: 1,
+  brief: "Plantar milho todo ano esgota o nitrogênio. Leguminosas, como a soja, devolvem nitrogênio ao solo pelas bactérias das raízes.",
+  fact: "Nas raízes das leguminosas vivem bactérias que capturam o nitrogênio do ar e o entregam à planta: adubo de graça.",
+  steps: [{ type: "crop", prompt: "Monte um ciclo de 3 anos que não esgote o solo.", hint: "Nunca repita a mesma cultura em anos seguidos." }]
+},
+{
+  t: "Arquivos da Terra", ico: "&#128128;", late: 1,
+  brief: "Fósseis são páginas da história da Terra. Mas magma derrete um osso e pressão extrema o destrói.",
+  fact: "Por isso quase todo fóssil conhecido vem de rocha sedimentar: lama e areia cobrem o corpo devagar, sem destruí-lo.",
+  steps: [{ type: "quiz", prompt: "Em que tipo de rocha os fósseis conseguem se preservar?", opts: [
+    { l: "Rochas sedimentares", ok: 1, why: "Camadas de sedimento envolvem e protegem o fóssil." },
+    { l: "Rochas ígneas (magmáticas)", why: "O magma derreteria o fóssil completamente." },
+    { l: "Rochas metamórficas", why: "Calor e pressão deformariam qualquer vestígio." }
+  ]}]
+},
+{
+  t: "Poluição Oculta", ico: "&#128465;", late: 1,
+  brief: "A chuva atravessa o lixo de um lixão, mistura-se à decomposição e desce ao solo como um líquido escuro e tóxico.",
+  fact: "Num aterro sanitário correto existe uma manta impermeável e um sistema de drenagem que capta esse líquido para tratamento.",
+  steps: [{ type: "text", prompt: "Como se chama esse líquido escuro do lixo, que contamina o lençol freático?",
+    accept: ["chorume", "churume", "lixiviado"], ph: "Nome do líquido tóxico",
+    hint: "Oito letras, começa com CH — palavra bem brasileira." }]
+},
+{
+  t: "Estratégias de Combate", ico: "&#128737;", late: 1,
+  brief: "Cada terreno pede uma defesa diferente contra a erosão. Escolha a técnica certa em cada cenário.",
+  fact: "Os terraços de arroz nas Filipinas têm mais de 2 mil anos e ainda seguram o solo das encostas até hoje.",
+  steps: [
+    { type: "quiz", prompt: "Cenário 1 · uma encosta muito íngreme sob chuva forte.", opts: [
+      { l: "Terraceamento (degraus no morro)", ok: 1, why: "Os degraus interrompem a descida da água." },
+      { l: "Quebra-vento", why: "Fileiras de árvores servem contra vento, não contra enxurrada." },
+      { l: "Deixar o solo nu para secar", why: "Solo nu em encosta é convite à erosão." }] },
+    { type: "quiz", prompt: "Cenário 2 · uma planície reta com ventanias constantes.", opts: [
+      { l: "Quebra-vento (fileiras de árvores)", ok: 1, why: "As árvores freiam o vento e a erosão eólica." },
+      { l: "Terraceamento", why: "Degraus não resolvem vento em terreno plano." },
+      { l: "Arar o solo mais fundo", why: "Solo solto e seco voa com mais facilidade." }] }
+  ]
+},
+{
+  t: "O Gráfico Perfeito", ico: "&#128202;", late: 1,
+  brief: "Ajuste as proporções do solo ideal. A soma precisa fechar exatamente em 100%.",
+  fact: "Metade sólido, metade poros: é esse equilíbrio que permite raiz respirando e bebendo ao mesmo tempo.",
+  steps: [{ type: "nums", prompt: "Monte a composição de um solo ideal.", items: [
+    { id: "min", l: "Mineral", target: 45 }, { id: "org", l: "Orgânico", target: 5 },
+    { id: "agu", l: "Água", target: 25 }, { id: "ar", l: "Ar", target: 25 }
+  ], hint: "Mineral 45, orgânico 5, e os poros divididos igualmente entre ar e água." }]
+},
+{
+  t: "O Cofre da Terra", ico: "&#128274;", late: 1,
+  brief: "Desafio final. Responda as 4 perguntas: a primeira letra de cada resposta forma a senha do cofre.",
+  fact: "Solo não é sinônimo de terra solta: é um organismo vivo, com bilhões de seres por punhado, que sustenta 95% do que comemos.",
+  steps: [
+    { type: "quiz", letter: "S", prompt: "Pista 1 · qual fração fica ENTRE a areia e a argila em tamanho?", opts: [
+      { l: "Silte", ok: 1, why: "Guarde a letra S." }, { l: "Areia", why: "Areia é a maior das três." }, { l: "Argila", why: "Argila é a menor das três." }] },
+    { type: "quiz", letter: "O", prompt: "Pista 2 · a camada superficial de folhas e restos vegetais é o horizonte…", opts: [
+      { l: "Horizonte O", ok: 1, why: "Guarde a letra O." }, { l: "Horizonte A", why: "O A já é mistura de húmus com mineral." }, { l: "Horizonte C", why: "O C é a rocha fragmentada do fundo." }] },
+    { type: "quiz", letter: "L", prompt: "Pista 3 · o reservatório de água subterrânea alimentado pela chuva chama-se…", opts: [
+      { l: "Lençol freático", ok: 1, why: "Guarde a letra L." }, { l: "Bacia hidrográfica", why: "Essa é a área que drena para um rio, na superfície." }, { l: "Nascente", why: "A nascente é onde a água aflora, não o reservatório." }] },
+    { type: "quiz", letter: "O", prompt: "Pista 4 · qual mineral oxidado deixa a Terra Roxa avermelhada?", opts: [
+      { l: "Óxido de ferro", ok: 1, why: "Guarde a última letra: O." }, { l: "Cálcio", why: "Cálcio não avermelha o solo." }, { l: "Enxofre", why: "Enxofre é amarelado." }] },
+    { type: "code", prompt: "Junte as 4 iniciais e abra o cofre.", answer: "SOLO", hint: "S · O · L · O" }
+  ]
+}
+];
 
-const ScreenWelcome = ({ onStart }) => (
-  <Card className="flex flex-col items-center text-center py-20 animate-in zoom-in duration-500 border-amber-600/20">
-    <div className="p-8 bg-amber-600/10 rounded-full mb-10 relative">
-        <div className="absolute inset-0 bg-amber-500/20 rounded-full animate-ping" />
-        <Map className="w-16 h-16 text-amber-500 relative z-10" />
-    </div>
-    <h2 className="text-5xl font-black mb-6 uppercase tracking-tighter leading-tight">Jornada<br/><span className="text-amber-500">Geológica</span></h2>
-    <p className="text-stone-400 mb-10 max-w-sm leading-relaxed text-sm font-medium">
-      São 20 desafios que testarão os seus conhecimentos desde os fundamentos da formação da terra até à complexa "Olimpíada de Ciências" do 6º ano.
-    </p>
-    <Button onClick={onStart} className="w-full py-6 text-xl shadow-amber-500/10">INICIAR EXPEDIÇÃO</Button>
-  </Card>
-);
+/* ===================== estado ===================== */
+const SAVE = "misterios-solo-v1";
+const fresh = () => ({ scr: "home", ph: 0, st: 0, score: 0, streak: 0, best: 0, stars: {}, pen: 0, mute: false, secs: 0 });
+let S = fresh();
+try {
+  const raw = localStorage.getItem(SAVE);
+  if (raw) S = Object.assign(fresh(), JSON.parse(raw));
+} catch (e) {}
+S.scr = S.ph > 0 ? "map" : "home";
+const save = () => { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} };
 
-// ==========================================
-// PARTE 1: NÍVEL FUNDAMENTAL (Fases 1 a 10)
-// ==========================================
+let W = {};               /* estado volátil da etapa atual */
+let timer = null;
+const startClock = () => { clearInterval(timer); timer = setInterval(() => { S.secs++; paintHud(); }, 1000); };
+const mmss = s => String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+const totalStars = () => Object.values(S.stars).reduce((a, b) => a + b, 0);
+const isLate = () => S.scr === "play" && !!PHASES[S.ph].late;
 
-const Phase1 = ({ onAction, onBack }) => {
-  const [isShovelActive, setIsShovelActive] = useState(false);
-  const [dugBlocks, setDugBlocks] = useState([]);
-  const [answer, setAnswer] = useState("");
-  const [hint, setHint] = useState("Clique na pá para começar a escavação!");
+/* ===================== HUD ===================== */
+function paintHud() {
+  const playing = S.scr === "play" || S.scr === "done";
+  $("#hud").innerHTML = playing ? `
+    <div class="stat"><b>${S.score}</b><span>Pontos</span></div>
+    <div class="stat"><b>${S.ph + 1}/20</b><span>Fase</span></div>
+    <div class="stat"><b>&#11088; ${totalStars()}</b><span>Estrelas</span></div>
+    <div class="stat"><b>${mmss(S.secs)}</b><span>Tempo</span></div>` : "";
+  $("#barfill").style.width = (playing ? ((S.ph + (S.scr === "done" ? 1 : 0)) / 20) * 100 : 0) + "%";
+  document.body.classList.toggle("late", isLate());
+  $("#brand").classList.toggle("late", isLate());
+  $("#brand").innerHTML = S.scr === "win" ? "&#127942;" : (isLate() ? "&#128300;" : "&#9968;");
+  $("#sub").textContent = isLate() ? "Olimpíada de Ciências" : "Expedição Geológica";
+  $("#mute").innerHTML = S.mute ? "&#128263;" : "&#128266;";
+}
 
-  const excavationSteps = [
-    { id: 1, label: "Superfície", color: "bg-green-900", hint: "Aqui em cima temos muita matéria orgânica e vida!" },
-    { id: 2, label: "Húmus", color: "bg-stone-900", hint: "O solo está a ficar mais escuro e rico em nutrientes." },
-    { id: 3, label: "Minerais", color: "bg-amber-900", hint: "Muitos minerais acumulados. Estamos longe da luz agora." },
-    { id: 4, label: "Fragmentos", color: "bg-stone-700", hint: "Comecei a encontrar pedaços de rocha partida..." },
-    { id: 5, label: "Base Sólida", color: "bg-stone-600", hint: "Cheguei no limite! É uma parede de pedra impenetrável." }
-  ];
+/* ===================== feedback ===================== */
+let tmr = null;
+function toast(ok, msg) {
+  const t = $("#toast");
+  t.className = "show " + (ok ? "ok" : "no");
+  t.querySelector("b").textContent = ok ? "Muito bem!" : "Quase!";
+  t.querySelector("span").textContent = msg;
+  clearTimeout(tmr);
+  tmr = setTimeout(() => { t.className = ""; }, ok ? 1600 : 3200);
+}
+function wrong(msg) {
+  sfx.no(); S.pen++; S.streak = 0;
+  const c = $(".card"); if (c) { c.classList.remove("shake"); void c.offsetWidth; c.classList.add("shake"); }
+  toast(false, msg); paintHud(); save();
+}
+function right(msg) {
+  sfx.ok(); S.streak++;
+  const bonus = S.streak >= 3 ? 10 : 0;
+  S.score += 20 + bonus;
+  toast(true, msg + (bonus ? "  (+" + bonus + " de sequência!)" : ""));
+  paintHud();
+  const ph = PHASES[S.ph];
+  setTimeout(() => {
+    if (S.st + 1 < ph.steps.length) { S.st++; W = {}; render(); }
+    else finishPhase();
+  }, 950);
+}
+function finishPhase() {
+  const stars = S.pen === 0 ? 3 : S.pen <= 2 ? 2 : 1;
+  S.score += stars * 30;
+  S.stars[S.ph] = Math.max(S.stars[S.ph] || 0, stars);
+  S.scr = "done"; save(); sfx.win(); burst(stars * 28); render();
+}
+function nextPhase() {
+  if (S.ph + 1 >= PHASES.length) { S.scr = "win"; S.best = Math.max(S.best, S.score); clearInterval(timer); save(); burst(140); render(); return; }
+  S.ph++; S.st = 0; S.pen = 0; W = {}; S.scr = "play"; save(); render();
+}
+function askHint() {
+  const st = PHASES[S.ph].steps[S.st];
+  const h = st.hint || st.opts && "Elimine as alternativas que mudam de assunto." || "Releia o enunciado com atenção.";
+  S.score = Math.max(0, S.score - 10); S.pen++; sfx.tap(); paintHud(); save();
+  toast(false, "Dica (-10 pts): " + h);
+}
 
-  const handleDig = (step) => {
-    if (!isShovelActive) return setHint("Primeiro, ative a pá clicando nela!");
-    if (dugBlocks.includes(step.id)) return;
-    if (dugBlocks.length + 1 !== step.id) return setHint("Devemos cavar camada por camada, de cima para baixo!");
-    setDugBlocks([...dugBlocks, step.id]);
-    setHint(step.hint);
-  };
-
-  const checkAnswer = () => {
-    const val = normalize(answer);
-    if (["rocha mae", "rochamae", "rocha-mae", "rocha matriz"].includes(val)) onAction('success', 'Excelente! A Rocha Mãe é o ponto zero do solo.');
-    else onAction('error', 'Pense no alicerce geológico inalterado.');
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-bottom">
-      <PhaseHeader onBack={onBack} level={1} title="Origem Primordial" description="Todo solo começa com a transformação de uma rocha sólida. Cave até a base para descobrir o nome técnico do material geológico que dá origem ao solo." />
-      <div className="flex items-start gap-4 bg-stone-900/80 p-4 rounded-2xl border border-stone-700 mb-6">
-        <div className="flex flex-col items-center gap-2">
-           <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center border-2 border-white/20"><User className="text-white" size={24} /></div>
-           <button onClick={() => setIsShovelActive(!isShovelActive)} className={`p-2 rounded-lg transition-all ${isShovelActive ? 'bg-amber-500 text-white scale-110' : 'bg-stone-800 text-stone-500'}`}><Shovel size={20} /></button>
-        </div>
-        <div className="flex-1 bg-stone-950 p-3 rounded-xl text-sm italic text-amber-100 border border-amber-900/30">
-          <MessageSquare className="inline-block mr-2 text-amber-500" size={14} />{hint}
-        </div>
+/* ===================== renderizadores de etapa ===================== */
+const R = {
+  quiz(st) {
+    const cols = st.cols === 2;
+    const scene = st.scene === "river" ? `
+      <div class="scene">
+        <div class="banks"><span>&#127794;</span><span>&#127794;</span></div>
+        <div class="water">LEITO DO RIO<div class="mud"></div></div>
+      </div>` : "";
+    return scene + `<p class="prompt">${st.prompt}</p>
+      <div class="${cols ? "grid" : "opts"}" style="${cols ? "grid-template-columns:repeat(2,1fr)" : ""}">
+        ${st.opts.map((o, i) => cols
+          ? `<button class="tile" data-a="opt" data-i="${i}"><span class="e">${o.e || "&#10022;"}</span><span class="l">${o.l}</span></button>`
+          : `<button class="opt" data-a="opt" data-i="${i}"><span class="k">${KEYS[i]}</span><span>${o.l}${o.d ? `<em>${o.d}</em>` : ""}</span></button>`
+        ).join("")}
+      </div>`;
+  },
+  multi(st) {
+    W.pick = W.pick || [];
+    const body = st.list
+      ? `<div class="opts">${st.tiles.map((t, i) =>
+          `<button class="opt ${W.pick.includes(i) ? "on" : ""}" data-a="togg" data-i="${i}"><span class="k">${W.pick.includes(i) ? "&#10003;" : KEYS[i]}</span><span>${t.l}</span></button>`).join("")}</div>`
+      : `<div class="grid">${st.tiles.map((t, i) =>
+          `<button class="tile ${W.pick.includes(i) ? "on" : ""}" data-a="togg" data-i="${i}"><span class="e">${t.e}</span><span class="l">${t.l}</span></button>`).join("")}</div>`;
+    return `<p class="prompt">${st.prompt}</p>${body}
+      <div class="hintline">selecionados: ${W.pick.length} de ${st.need}</div>
+      <div class="row"><button class="btn" data-a="check" ${W.pick.length === st.need ? "" : "disabled"}>Verificar</button></div>`;
+  },
+  order(st) {
+    W.ord = W.ord || st.items.slice();
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="sortlist">${W.ord.map((it, i) => `
+        <div class="sortitem">
+          <span class="dot" style="background:${it.c}"></span>
+          <span class="nm">${it.n}</span>
+          <span class="ar">
+            <button data-a="mv" data-i="${i}" data-d="-1" ${i === 0 ? "disabled" : ""}>&#9650;</button>
+            <button data-a="mv" data-i="${i}" data-d="1" ${i === W.ord.length - 1 ? "disabled" : ""}>&#9660;</button>
+          </span>
+        </div>`).join("")}</div>
+      <div class="hintline">topo = superfície &middot; base = rocha</div>
+      <div class="row"><button class="btn" data-a="check">Verificar estrutura</button></div>`;
+  },
+  slider(st) {
+    W.v = W.v === undefined ? st.start : W.v;
+    const v = W.v, good = v >= st.lo && v <= st.hi;
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="gauge">
+        <div class="lbl">${st.lbl}</div>
+        <div class="big" style="color:${good ? "var(--green)" : "var(--txt)"}">${v.toFixed(1)}</div>
+        <div class="st" style="color:${good ? "var(--green)" : "var(--dim)"}">${st.read(v)}</div>
       </div>
-      <div className="flex flex-col gap-1 bg-stone-950 p-2 rounded-xl border-4 border-stone-800 mb-6">
-        {excavationSteps.map((step) => (
-          <button key={step.id} onClick={() => handleDig(step)} className={`h-12 w-full transition-all flex items-center justify-center font-black text-xs uppercase relative overflow-hidden ${dugBlocks.includes(step.id) ? 'opacity-20 bg-transparent' : `${step.color} hover:brightness-110`} ${isShovelActive && !dugBlocks.includes(step.id) ? 'cursor-crosshair' : ''}`}>
-            {!dugBlocks.includes(step.id) && <span className="z-10 text-white/50">{step.label}</span>}
-            {dugBlocks.includes(step.id) && <Pickaxe size={16} className="text-amber-900 opacity-40" />}
-          </button>
-        ))}
+      <input type="range" min="${st.min}" max="${st.max}" step="${st.step}" value="${v}" data-a="rng">
+      <button class="btn" data-a="check">Analisar amostra</button>`;
+  },
+  mix(st) {
+    W.v = W.v === undefined ? st.start : W.v;
+    const a = W.v, c = 100 - a;
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="mix">
+        <div class="mixcol"><i style="height:${a}%;background:#f59e0b"></i><span>${a}%<br>Areia</span></div>
+        <div class="mixcol"><i style="height:${c}%;background:#c2410c"></i><span>${c}%<br>Argila</span></div>
       </div>
-      {dugBlocks.length === excavationSteps.length && (
-        <div className="flex flex-col gap-4 animate-in fade-in">
-          <input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && checkAnswer()} placeholder="Nome da rocha base?" className="bg-stone-950 border-2 border-amber-600/50 rounded-xl p-4 text-center font-bold uppercase" />
-          <Button onClick={checkAnswer}>CONFIRMAR RESPOSTA</Button>
-        </div>
-      )}
-    </Card>
-  );
+      <input type="range" min="10" max="90" step="5" value="${a}" data-a="rng">
+      <button class="btn lateb" data-a="check">Testar permeabilidade</button>`;
+  },
+  crop(st) {
+    W.seq = W.seq || [null, null, null];
+    const E = { milho: "&#127805;", soja: "&#127793;" };
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="slots">${W.seq.map((v, i) => `
+        <div class="slot">
+          <span class="yr">Ano ${i + 1}</span>
+          <div class="box ${v ? "full" : ""}">${v ? E[v] : "&middot;"}</div>
+          <span class="pick">
+            <button data-a="slot" data-i="${i}" data-c="milho" title="Milho">&#127805;</button>
+            <button data-a="slot" data-i="${i}" data-c="soja" title="Soja (leguminosa)">&#127793;</button>
+          </span>
+        </div>`).join("")}</div>
+      <div class="hintline">&#127805; milho &middot; &#127793; soja (devolve nitrogênio)</div>
+      <div class="row"><button class="btn lateb" data-a="check">Verificar ciclo</button></div>`;
+  },
+  nums(st) {
+    W.n = W.n || st.items.reduce((o, i) => (o[i.id] = 25, o), {});
+    const sum = st.items.reduce((a, i) => a + W.n[i.id], 0);
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="nums">${st.items.map(i => `
+        <div class="num">
+          <div class="l">${i.l}</div>
+          <div class="c">
+            <button data-a="inc" data-i="${i.id}" data-d="-5">&minus;</button>
+            <b>${W.n[i.id]}%</b>
+            <button data-a="inc" data-i="${i.id}" data-d="5">+</button>
+          </div>
+        </div>`).join("")}</div>
+      <div class="total" style="color:${sum === 100 ? "var(--green)" : "var(--red)"}">Total: ${sum}%</div>
+      <button class="btn lateb" data-a="check">Validar proporções</button>`;
+  },
+  text(st) {
+    return `<p class="prompt">${st.prompt}</p>
+      <input class="txt" id="ti" placeholder="${st.ph}" autocomplete="off" spellcheck="false">
+      <div class="row"><button class="btn ${isLate() ? "lateb" : ""}" data-a="check">Confirmar resposta</button></div>`;
+  },
+  dig(st) {
+    W.dug = W.dug || [];
+    const done = W.dug.length === st.layers.length;
+    return `<div class="speech"><span class="who">&#129485;</span><span>${W.say || st.prompt}</span></div>
+      <div class="dig">${st.layers.map((l, i) => `
+        <button data-a="dig" data-i="${i}" class="${W.dug.includes(i) ? "gone" : ""}" style="background:${l.c}">${l.l}</button>`).join("")}</div>
+      ${done ? `<div class="row"><button class="btn" data-a="check">Continuar</button></div>` : ""}`;
+  },
+  code(st) {
+    return `<p class="prompt">${st.prompt}</p>
+      <div class="clues">
+        <div class="clue"><b>1.</b> Silte &nbsp;<b>2.</b> Horizonte O &nbsp;<b>3.</b> Lençol freático &nbsp;<b>4.</b> Óxido de ferro</div>
+      </div>
+      <div class="code">${[0, 1, 2, 3].map(i => `<input maxlength="1" data-a="cd" data-i="${i}" autocomplete="off">`).join("")}</div>
+      <div class="row"><button class="btn gr" data-a="check">Abrir o cofre</button></div>`;
+  }
 };
 
-const Phase2 = ({ onAction, onBack }) => {
-  const [selected, setSelected] = useState([]);
-  const items = [
-    { id: 1, label: "Minerais", ok: true, emoji: "💎" }, { id: 2, label: "M. Orgânica", ok: true, emoji: "🍂" },
-    { id: 3, label: "Plástico", ok: false, emoji: "🥤" }, { id: 4, label: "Água", ok: true, emoji: "💧" },
-    { id: 5, label: "Vidro", ok: false, emoji: "🧪" }, { id: 6, label: "Ar", ok: true, emoji: "💨" },
-    { id: 7, label: "Metal", ok: false, emoji: "⚙️" }, { id: 8, label: "Concreto", ok: false, emoji: "🧱" },
-    { id: 9, label: "Lixo", ok: false, emoji: "📟" },
-  ];
-  const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
-  const check = () => {
-    const okIds = items.filter(i => i.ok).map(i => i.id);
-    if (selected.length === 4 && selected.every(id => okIds.includes(id))) onAction('success', 'Composição equilibrada!');
-    else onAction('error', 'Foque nos 4 componentes naturais essenciais.');
-  };
-  return (
-    <Card className="animate-in slide-in-from-right">
-      <PhaseHeader onBack={onBack} level={2} title="Receita da Terra" description="O solo é um sistema trifásico (sólido, líquido e gasoso). Selecione os 4 elementos naturais que compõem um solo saudável." />
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {items.map(item => (
-          <button key={item.id} onClick={() => toggle(item.id)} className={`p-4 rounded-xl border-2 flex flex-col items-center gap-2 ${selected.includes(item.id) ? 'bg-amber-600 border-amber-400 scale-105' : 'bg-stone-900 border-stone-800 opacity-60'}`}>
-            <span className="text-2xl">{item.emoji}</span><span className="text-[10px] font-black uppercase text-center">{item.label}</span>
-          </button>
-        ))}
-      </div>
-      <Button onClick={check}>VERIFICAR COMPOSIÇÃO</Button>
-    </Card>
-  );
+/* ===================== verificações ===================== */
+const C = {
+  multi(st) {
+    const ok = st.tiles.map((t, i) => t.ok ? i : -1).filter(i => i >= 0);
+    return W.pick.length === st.need && W.pick.every(i => ok.includes(i))
+      ? [1, "Composição correta!"]
+      : [0, "Alguma escolha não faz parte do solo natural. Revise."];
+  },
+  order(st) {
+    return W.ord.map(i => i.id).join("") === st.correct.join("")
+      ? [1, "Perfil na ordem certa: O, A, B, C."]
+      : [0, "A ordem vai do que você pisa até a rocha inteira."];
+  },
+  slider(st) {
+    return W.v >= st.lo && W.v <= st.hi ? [1, "Faixa ideal encontrada!"] : [0, W.v < st.lo ? st.lowMsg : st.highMsg];
+  },
+  mix(st) {
+    return W.v >= st.lo && W.v <= st.hi ? [1, "Solo franco: equilíbrio perfeito!"] : [0, W.v > st.hi ? st.highMsg : st.lowMsg];
+  },
+  crop() {
+    if (W.seq.includes(null)) return [0, "Preencha os 3 anos de plantio."];
+    const [a, b, c] = W.seq;
+    return (a !== b && b !== c) ? [1, "Rotação correta: a leguminosa repõe o nitrogênio."]
+      : [0, "Repetir a mesma cultura em anos seguidos é monocultura — alterne!"];
+  },
+  nums(st) {
+    const sum = st.items.reduce((a, i) => a + W.n[i.id], 0);
+    if (sum !== 100) return [0, "A soma precisa dar exatamente 100%. Está em " + sum + "%."];
+    return st.items.every(i => W.n[i.id] === i.target)
+      ? [1, "Gráfico do solo ideal montado!"]
+      : [0, "Quase: o sólido pesa mais que os poros, e ar e água ficam iguais."];
+  },
+  text(st) {
+    const v = norm($("#ti") ? $("#ti").value : "");
+    if (!v) return [0, "Escreva sua resposta antes de confirmar."];
+    return st.accept.some(a => norm(a) === v) ? [1, "Resposta exata!"] : [0, "Não é isso. Use a dica se precisar."];
+  },
+  dig(st) {
+    return W.dug.length === st.layers.length ? [1, "Perfil escavado até a base!"] : [0, "Continue escavando."];
+  },
+  code(st) {
+    const v = (W.cd || []).join("").toUpperCase();
+    return v === st.answer ? [1, "Cofre aberto! O solo é a base da vida."] : [0, "Senha incorreta. Junte as iniciais das 4 respostas."];
+  }
 };
 
-const Phase3 = ({ onAction, onBack }) => {
-  const [order, setOrder] = useState([
-    { id: 'bi', t: 'Biológico', d: 'Raízes de plantas e micro-organismos quebram e alteram a estrutura.' },
-    { id: 'qu', t: 'Químico', d: 'A água e o oxigénio dissolvem e transformam os minerais da rocha.' },
-    { id: 'fi', t: 'Físico', d: 'A variação de temperatura (calor/frio) racha a rocha mecanicamente.' }
-  ]);
-  const rotate = () => setOrder(prev => [...prev.slice(1), prev[0]]);
-  return (
-    <Card className="animate-in slide-in-from-right">
-      <PhaseHeader onBack={onBack} level={3} title="Forças da Natureza" description="O intemperismo é o processo de desintegração das rochas. Em desertos, a grande variação térmica causa a fragmentação mecânica da pedra. Qual tipo de intemperismo é esse?" />
-      <div className="bg-stone-950 p-6 rounded-2xl border-2 border-amber-900/30 mb-6 text-center">
-        <h4 className="text-amber-500 font-black text-xl mb-2 uppercase">{order[0].t}</h4>
-        <p className="text-stone-400 text-sm italic">"{order[0].d}"</p>
-      </div>
-      <div className="flex gap-4">
-        <Button variant="outline" className="flex-1" onClick={rotate}>PRÓXIMO TIPO</Button>
-        <Button className="flex-1" onClick={() => order[0].id === 'fi' ? onAction('success', 'Intemperismo Físico detetado!') : onAction('error', 'O tipo físico é o responsável pela dilatação.')}>CONFIRMAR</Button>
-      </div>
-    </Card>
-  );
-};
-
-const Phase4 = ({ onAction, onBack }) => (
-  <Card className="animate-in slide-in-from-right">
-    <PhaseHeader onBack={onBack} level={4} title="Granulometria" description="A textura do solo depende do tamanho de suas partículas. Qual destas frações possui as menores partículas (< 0,002mm), sendo responsável pela plasticidade?" />
-    <div className="flex flex-col gap-3">
-      {[{l: "AREIA (2mm a 0,05mm)", v: false}, {l: "SILTE (0,05mm a 0,002mm)", v: false}, {l: "ARGILA (< 0,002mm)", v: true}].map(o => (
-        <button key={o.l} onClick={() => o.v ? onAction('success', 'A argila define a liga do solo!') : onAction('error', 'Partícula grande demais.')} className="p-5 bg-stone-900 border border-stone-700 rounded-xl font-black text-left hover:border-amber-500/50">{o.l}</button>
-      ))}
-    </div>
-  </Card>
-);
-
-const Phase5 = ({ onAction, onBack }) => {
-  const [layers, setLayers] = useState([
-    { id: 'C', n: 'Rocha Fragmentada', c: 'bg-stone-600' },
-    { id: 'O', n: 'Camada Orgânica', c: 'bg-green-950' },
-    { id: 'A', n: 'Mineral + Húmus', c: 'bg-stone-900' },
-    { id: 'B', n: 'Iluvial', c: 'bg-amber-900' },
-  ]);
-  const [selected, setSelected] = useState(null);
-  const moveLayer = (dir) => {
-    if (selected === null) return;
-    const newIdx = dir === 'up' ? selected - 1 : selected + 1;
-    if (newIdx < 0 || newIdx >= layers.length) return;
-    const n = [...layers];
-    const [m] = n.splice(selected, 1);
-    n.splice(newIdx, 0, m);
-    setLayers(n); setSelected(newIdx);
-  };
-  return (
-    <Card className="animate-in slide-in-from-right">
-      <PhaseHeader onBack={onBack} level={5} title="Perfil de Solo" description="Ao fazer um corte vertical, vemos horizontes. Organize as camadas de solo da superfície (topo) para o interior da terra (base)." />
-      <div className="flex gap-4 items-start mb-6">
-        <div className="flex-1 flex flex-col gap-2">
-          {layers.map((l, i) => (
-            <button key={l.id} onClick={() => setSelected(i)} className={`p-4 rounded-xl border-2 flex flex-col text-left ${selected === i ? 'border-amber-500 bg-amber-500/5' : 'border-stone-700 bg-stone-900/50'}`}>
-              <div className="flex items-center gap-3"><div className={`w-3 h-3 rounded-full ${l.c}`} /><span className="font-black text-sm uppercase">{l.n}</span></div>
-            </button>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 sticky top-0">
-          <button disabled={selected === null || selected === 0} onClick={() => moveLayer('up')} className="p-4 bg-amber-600/20 text-amber-500 rounded-2xl disabled:opacity-5"><ChevronUp size={24} /></button>
-          <button disabled={selected === null || selected === layers.length - 1} onClick={() => moveLayer('down')} className="p-4 bg-amber-600/20 text-amber-500 rounded-2xl disabled:opacity-5"><ChevronDown size={24} /></button>
-        </div>
-      </div>
-      <Button onClick={() => layers.map(l => l.id).join('') === 'OABC' ? onAction('success', 'Perfil organizado!') : onAction('error', 'A ordem correta reflete a profundidade da superfície para a rocha.')} className="w-full">VERIFICAR ESTRUTURA</Button>
-    </Card>
-  );
-};
-
-const Phase6 = ({ onAction, onBack }) => {
-  const [ph, setPh] = useState(0);
-  return (
-    <Card className="animate-in slide-in-from-right">
-      <PhaseHeader onBack={onBack} level={6} title="Química da Fertilidade" description="O pH indica a acidez ou alcalinidade. A maioria das culturas agrícolas prefere solos levemente ácidos a neutros. Ajuste o sensor para o pH ideal (entre 6.0 e 7.0)." />
-      <div className="h-32 rounded-3xl border-4 flex flex-col items-center justify-center mb-6 bg-stone-900 border-stone-700 text-stone-200">
-        <span className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-1">Indicador de Acidez</span>
-        <div className="text-5xl font-black">{ph.toFixed(1)}</div>
-        <span className="text-xs font-bold mt-1 uppercase">
-          {ph < 7 ? 'Ácido' : ph === 7 ? 'Neutro' : 'Básico / Alcalino'}
-        </span>
-      </div>
-      <input type="range" min="0" max="14" step="0.5" value={ph} onChange={e => setPh(parseFloat(e.target.value))} className="w-full h-4 bg-stone-900 rounded-lg appearance-none accent-amber-500 mb-6" />
-      <Button onClick={() => (ph >= 6 && ph <= 7) ? onAction('success', 'pH Neutro! Nutrientes disponíveis.') : onAction('error', 'Solo fora da faixa ideal.')}>ANALISAR AMOSTRA</Button>
-    </Card>
-  );
-};
-
-const Phase7 = ({ onAction, onBack }) => (
-  <Card className="animate-in slide-in-from-right">
-    <PhaseHeader onBack={onBack} level={7} title="Solos do Brasil" description="A famosa 'Terra Roxa' do Sul/Sudeste brasileiro é extremamente fértil e originada do basalto. Qual componente mineral, ao oxidar, confere a cor avermelhada a este solo?" />
-    <div className="grid grid-cols-2 gap-4">
-      {[{l: "Óxido de Ferro", v: true, e: "🧲"}, {l: "Silício Puro", v: false, e: "💎"}, {l: "Cálcio", v: false, e: "🐚"}, {l: "Enxofre", v: false, e: "🌋"}].map(o => (
-        <button key={o.l} onClick={() => o.v ? onAction('success', 'Correto! O ferro oxidado dá o tom avermelhado.') : onAction('error', 'Este mineral não causa a cor.')} className="p-6 bg-stone-900 border border-stone-700 rounded-2xl font-bold flex flex-col items-center gap-2 hover:border-amber-500">
-          <span className="text-2xl">{o.e}</span><span className="text-xs uppercase text-center">{o.l}</span>
-        </button>
-      ))}
-    </div>
-  </Card>
-);
-
-const Phase8 = ({ onAction, onBack }) => (
-  <Card className="animate-in slide-in-from-right">
-    <PhaseHeader onBack={onBack} level={8} title="Conservação" description="Em terrenos inclinados, a chuva pode lavar o solo. O plantio em 'Curvas de Nível' tem qual função técnica principal?" />
-    <div className="flex flex-col gap-3">
-      <Button variant="secondary" className="justify-start py-5 px-6 text-left" onClick={() => onAction('error', 'Isso agravaria a erosão.')}>Aumentar velocidade da drenagem</Button>
-      <Button variant="secondary" className="justify-start py-5 px-6 text-left" onClick={() => onAction('success', 'Exato! Reduzir a energia cinética da água evita o arraste.')}>Reduzir a velocidade do escoamento superficial</Button>
-    </div>
-  </Card>
-);
-
-const Phase9 = ({ onAction, onBack }) => (
-  <Card className="animate-in slide-in-from-right">
-    <PhaseHeader onBack={onBack} level={9} title="O Paradoxo Físico" description="Qual solo possui muitos espaços vazios (alta porosidade), mas os poros são tão pequenos que a água fica 'presa' (baixa permeabilidade)?" />
-    <div className="grid grid-cols-2 gap-4">
-      <button onClick={() => onAction('error', 'A areia é altamente permeável.')} className="p-10 bg-stone-900 border-2 border-stone-800 rounded-3xl font-black text-xl hover:border-amber-500 uppercase">Arenoso</button>
-      <button onClick={() => onAction('success', 'Isso! A argila retém água nos microporos.')} className="p-10 bg-stone-900 border-2 border-stone-800 rounded-3xl font-black text-xl hover:border-amber-500 uppercase">Argiloso</button>
-    </div>
-  </Card>
-);
-
-const Phase10 = ({ onAction, onBack }) => {
-  const [choices, setChoices] = useState([]);
-  const valid = [1, 3, 4];
-  const toggle = (id) => setChoices(c => c.includes(id) ? c.filter(x => x !== id) : [...c, id]);
-  return (
-    <Card className="animate-in slide-in-from-right">
-       <PhaseHeader onBack={onBack} level={10} title="Sustentabilidade" description="Selecione as 3 práticas que protegem a estrutura e a vida do solo para manter sua produtividade sustentável." />
-      <div className="flex flex-col gap-3 mb-6">
-        {[{id: 1, l: "Rotação de Culturas"}, {id: 2, l: "Queimadas para limpeza"}, {id: 3, l: "Plantio Direto (Sem revolver)"}, {id: 4, l: "Adubação Verde"}].map(o => (
-          <button key={o.id} onClick={() => toggle(o.id)} className={`p-4 rounded-xl border-2 flex items-center gap-3 text-left ${choices.includes(o.id) ? 'bg-amber-600/20 border-amber-500' : 'bg-stone-900 border-stone-700'}`}>
-            <span className="font-bold uppercase text-xs">{o.l}</span>
-          </button>
-        ))}
-      </div>
-      <Button onClick={() => choices.length === 3 && choices.every(x => valid.includes(x)) ? onAction('success', 'Você concluiu os fundamentos!') : onAction('error', 'Selecione exatamente as 3 práticas positivas.')} variant="success" className="py-5 w-full">AVANÇAR PARA A OLIMPÍADA DE CIÊNCIAS</Button>
-    </Card>
-  );
-};
-
-// ==========================================
-// PARTE 2: DESAFIO OLIMPÍADA - 6º ANO (Fases 11 a 20)
-// ==========================================
-
-const Phase11 = ({ onAction, onBack }) => {
-  const [step, setStep] = useState(1);
-  const [selectedRock, setSelectedRock] = useState(null);
-
-  const rockTypes = [
-    { id: 'ig', n: 'Ígneas (Magmáticas)', d: 'Formadas pelo resfriamento do magma.', icon: '🌋' },
-    { id: 'se', n: 'Sedimentares', d: 'Formadas pela compactação de sedimentos.', icon: '🏜️' },
-    { id: 'me', n: 'Metamórficas', d: 'Transformadas por calor e pressão extrema.', icon: '💎' }
-  ];
-
-  const handleVerify = () => {
-    if (step === 1 && selectedRock === 'ig') {
-      setStep(2); setSelectedRock(null);
-      onAction('success', 'Correto! O basalto é uma rocha magmática.');
-    } else if (step === 2 && selectedRock === 'se') {
-      setStep(3); setSelectedRock(null);
-      onAction('success', 'Exato! O acúmulo de partículas gera rochas sedimentares.');
-    } else if (step === 3 && selectedRock === 'me') {
-      onAction('success', 'Mestre das Rochas! Pressão e calor geram rochas metamórficas.');
-    } else {
-      onAction('error', 'Analise o processo descrito e tente novamente.');
-    }
-  };
-
-  const currentDesc = step === 1 
-    ? "Ocorreu uma erupção vulcânica. A lava escorreu e resfriou-se rapidamente na superfície, formando o Basalto. Qual é este tipo de rocha?"
-    : step === 2 
-    ? "O vento e a água carregaram grãos de areia por milhões de anos até o fundo de um lago, onde foram esmagados e cimentados. Qual é esta rocha?"
-    : "Uma rocha antiga foi empurrada para as profundezas da crosta. O calor extremo e o peso das montanhas acima alteraram toda a sua estrutura. Qual é a rocha resultante?";
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={11} title="O Ciclo das Rochas" description="A rocha-mãe pode ter origens muito diferentes. Leia a descrição do evento geológico e selecione qual tipo de rocha foi formado." />
-      <div className="bg-stone-900 p-6 rounded-2xl border border-indigo-500/30 text-center mb-6">
-        <span className="text-indigo-400 font-black text-[10px] uppercase tracking-widest block mb-2">Evento Geológico {step} de 3</span>
-        <p className="font-bold text-stone-200">{currentDesc}</p>
-      </div>
-      <div className="flex flex-col gap-3 mb-6">
-         {rockTypes.map(r => (
-            <button key={r.id} onClick={() => setSelectedRock(r.id)} className={`p-4 rounded-xl border-2 flex items-center gap-4 text-left transition-all ${selectedRock === r.id ? 'bg-indigo-600/20 border-indigo-500' : 'bg-stone-900 border-stone-700 hover:border-indigo-500/50'}`}>
-                <span className="text-3xl">{r.icon}</span>
-                <div>
-                    <p className="font-black uppercase text-sm">{r.n}</p>
-                    <p className="text-[10px] text-stone-400">{r.d}</p>
-                </div>
-            </button>
-         ))}
-      </div>
-      <Button onClick={handleVerify} disabled={!selectedRock} className="w-full bg-indigo-600 hover:bg-indigo-500">IDENTIFICAR ROCHA</Button>
-    </Card>
-  );
-};
-
-const Phase12 = ({ onAction, onBack }) => {
-  const [areia, setAreia] = useState(80);
-  const argila = 100 - areia;
-
-  const check = () => {
-    if (areia >= 40 && areia <= 60) onAction('success', 'Solo equilibrado (Franco)! Retém a água ideal.');
-    else if (areia > 60) onAction('error', 'Tem muita areia. A água vai drenar muito rápido e a planta vai secar.');
-    else onAction('error', 'Tem muita argila. A água vai empoçar e as raízes vão apodrecer.');
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={12} title="O Equilíbrio Físico" description="Uma planta precisa de um solo que retenha água, mas que não fique encharcado. Misture as frações de Areia e Argila para criar um solo balanceado (Solo Franco)." />
-      <div className="flex items-center gap-4 mb-8 h-40">
-        <div className="flex-1 flex flex-col justify-end bg-amber-900/20 rounded-b-2xl border-4 border-amber-600/50 h-full relative overflow-hidden">
-            <div className="bg-amber-600 w-full transition-all duration-300" style={{ height: `${areia}%` }} />
-            <span className="absolute inset-0 flex items-center justify-center font-black text-2xl drop-shadow-md">{areia}% Areia</span>
-        </div>
-        <div className="flex-1 flex flex-col justify-end bg-orange-900/20 rounded-b-2xl border-4 border-orange-800/50 h-full relative overflow-hidden">
-            <div className="bg-orange-800 w-full transition-all duration-300" style={{ height: `${argila}%` }} />
-            <span className="absolute inset-0 flex items-center justify-center font-black text-2xl drop-shadow-md">{argila}% Argila</span>
-        </div>
-      </div>
-      <input type="range" min="10" max="90" value={areia} onChange={e => setAreia(parseInt(e.target.value))} className="w-full h-4 bg-stone-900 rounded-lg appearance-none accent-indigo-500 mb-8" />
-      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">TESTAR PERMEABILIDADE</Button>
-    </Card>
-  );
-};
-
-const Phase13 = ({ onAction, onBack }) => {
-  const [step, setStep] = useState(1);
-  const [answer, setAnswer] = useState("");
-
-  const handleAction = () => {
-    if (step === 1) {
-      onAction('success', 'A minhoca! Ela cava túneis que deixam o ar e a água entrarem.');
-      setStep(2);
-    } else {
-      if (normalize(answer) === "humus" || normalize(answer) === "húmus") {
-        onAction('success', 'Isso mesmo! O húmus é um adubo natural incrível.');
-      } else {
-        onAction('error', 'É uma palavra de 5 letras. Começa com H. É a matéria orgânica em decomposição.');
-      }
-    }
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={13} title="O Engenheiro Subterrâneo" description="Certos animais são fundamentais para o ecossistema do solo, pois atuam como 'arados naturais' e produtores de fertilizante." />
-      {step === 1 ? (
-        <div className="flex flex-col gap-6 text-center">
-           <p className="text-stone-300 font-bold mb-4">Selecione o animal que cava galerias ajudando na aeração do solo:</p>
-           <div className="grid grid-cols-2 gap-4">
-              {['🐜 Formiga', '🐛 Centopeia', '🪱 Minhoca', '🐌 Lesma'].map(bug => (
-                <button key={bug} onClick={() => bug.includes('Minhoca') ? handleAction() : onAction('error', 'Não é o principal arado natural.')} className="p-6 bg-stone-900 border-2 border-stone-700 rounded-2xl text-2xl hover:bg-stone-800 hover:border-indigo-500 transition-all">{bug}</button>
-              ))}
-           </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6 text-center">
-          <p className="text-stone-300 font-bold mb-4">A minhoca ingere terra e restos de plantas. As suas fezes formam uma matéria escura e muito fértil. Qual é o nome deste adubo orgânico natural?</p>
-          <input autoFocus value={answer} onChange={e => setAnswer(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAction()} placeholder="NOME DO MATERIAL" className="bg-stone-950 p-4 rounded-xl border-2 border-indigo-500 text-center font-black uppercase text-xl outline-none" />
-          <Button onClick={handleAction} className="bg-indigo-600 hover:bg-indigo-500">VERIFICAR NOME</Button>
-        </div>
-      )}
-    </Card>
-  );
-};
-
-const Phase14 = ({ onAction, onBack }) => {
-  const [treePlanted, setTreePlanted] = useState(false);
-
-  const check = () => {
-    if (treePlanted) onAction('success', 'Mata Ciliar protegida! O rio está a salvo do assoreamento.');
-    else onAction('error', 'Sem as raízes das árvores, a terra da margem desaba para dentro do rio.');
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={14} title="Ameaça ao Rio (Assoreamento)" description="Quando se retira a vegetação das margens de um rio, a terra solta é lavada pela chuva e vai parar ao fundo do rio, secando-o. Como se chama a vegetação que devemos manter para evitar isso?" />
-      
-      <div className="relative h-48 bg-stone-900 rounded-2xl overflow-hidden mb-8 border-4 border-stone-800 flex flex-col justify-end">
-         <div className="h-1/2 w-full bg-blue-500/60 relative flex items-center justify-center">
-            <span className="text-blue-200 font-black tracking-widest opacity-50">LEITO DO RIO</span>
-            {!treePlanted && <div className="absolute inset-x-0 bottom-0 h-1/2 bg-amber-900/80 animate-pulse" title="Terra invadindo o rio (Assoreamento)" />}
-         </div>
-         <div className="absolute top-0 inset-x-0 flex justify-between p-4">
-            <button onClick={() => setTreePlanted(true)} className={`w-16 h-24 flex items-end justify-center rounded-xl transition-all ${treePlanted ? 'bg-green-900/50 scale-110' : 'bg-stone-800 hover:bg-stone-700 border-2 border-dashed border-stone-600'}`}>
-                {treePlanted ? <TreePine className="text-green-500 w-12 h-12" /> : <span className="text-[10px] text-stone-500 font-bold mb-2">PLANTAR</span>}
-            </button>
-            <button onClick={() => setTreePlanted(true)} className={`w-16 h-24 flex items-end justify-center rounded-xl transition-all ${treePlanted ? 'bg-green-900/50 scale-110' : 'bg-stone-800 hover:bg-stone-700 border-2 border-dashed border-stone-600'}`}>
-                {treePlanted ? <TreePine className="text-green-500 w-12 h-12" /> : <span className="text-[10px] text-stone-500 font-bold mb-2">PLANTAR</span>}
-            </button>
-         </div>
-      </div>
-      <div className="flex gap-4">
-        <Button variant="secondary" className="flex-1 text-xs" onClick={() => onAction('error', 'O pasto não segura a margem do rio com força suficiente.')}>Plantar Pasto</Button>
-        <Button variant="secondary" onClick={check} className="flex-1 text-xs">Restaurar Mata Ciliar</Button>
-      </div>
-    </Card>
-  );
-};
-
-const Phase15 = ({ onAction, onBack }) => {
-  const [seq, setSeq] = useState([null, null, null]);
-  const crops = [{id: 'milho', e: '🌽', n: 'Milho'}, {id: 'soja', e: '🌱', n: 'Soja (Leguminosa)'}];
-
-  const setSlot = (i, cropId) => {
-    const n = [...seq]; n[i] = cropId; setSeq(n);
-  };
-
-  const check = () => {
-    if (seq.includes(null)) return onAction('error', 'Preencha os 3 anos de plantio.');
-    if (seq[0] === 'milho' && seq[1] === 'soja' && seq[2] === 'milho') onAction('success', 'A Rotação de Culturas recupera o nitrogénio usando a leguminosa!');
-    else if (seq[0] === 'soja' && seq[1] === 'milho' && seq[2] === 'soja') onAction('success', 'Correto! Alternar as culturas não esgota o solo.');
-    else onAction('error', 'Plantar a mesma coisa seguida esgota os nutrientes (Monocultura). Deve alternar!');
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={15} title="Técnicas: Rotação" description="Plantar milho ano após ano esgota o solo. Monte um ciclo de plantio de 3 anos alternando o Milho com uma Leguminosa (que devolve Nitrogénio à terra)." />
-      <div className="flex justify-between gap-2 mb-8">
-         {[0,1,2].map(i => (
-           <div key={i} className="flex-1 flex flex-col items-center gap-2">
-             <span className="text-[10px] font-black uppercase text-stone-500">Ano {i+1}</span>
-             <div className="w-full h-24 bg-stone-900 border-2 border-dashed border-stone-700 rounded-xl flex flex-col items-center justify-center p-1">
-                {seq[i] ? <span className="text-3xl">{crops.find(c=>c.id === seq[i]).e}</span> : <span className="text-xs text-stone-600">Vazio</span>}
-             </div>
-             <div className="flex gap-1 w-full">
-                <button onClick={() => setSlot(i, 'milho')} className="flex-1 bg-stone-800 p-1 rounded text-xs hover:bg-amber-600">🌽</button>
-                <button onClick={() => setSlot(i, 'soja')} className="flex-1 bg-stone-800 p-1 rounded text-xs hover:bg-green-600">🌱</button>
-             </div>
-           </div>
-         ))}
-      </div>
-      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">VERIFICAR CICLO AGRÍCOLA</Button>
-    </Card>
-  );
-};
-
-const Phase16 = ({ onAction, onBack }) => {
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={16} title="Os Arquivos da Terra" description="Os fósseis (ossos de dinossauros, folhas antigas) contam a história da Terra. Mas o calor derrete-os e a pressão destrói-os. Em que tipo de rocha os fósseis conseguem sobreviver?" />
-      <div className="flex justify-center mb-8">
-        <div className="p-6 bg-stone-900 rounded-full border-4 border-stone-700 shadow-inner">
-           <Skull className="w-16 h-16 text-stone-400" />
-        </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('error', 'O magma derreteria o osso completamente.')}>Rochas Magmáticas (Ígneas)</Button>
-        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('error', 'A pressão e calor extremos deformariam o fóssil.')}>Rochas Metamórficas</Button>
-        <Button variant="secondary" className="justify-start text-left" onClick={() => onAction('success', 'Exato! Eles ficam preservados entre as camadas de sedimentos (areia/lama).')}>Rochas Sedimentares</Button>
-      </div>
-    </Card>
-  );
-};
-
-const Phase17 = ({ onAction, onBack }) => {
-  const [answer, setAnswer] = useState("");
-  const check = () => {
-    const val = normalize(answer);
-    if (val === "chorume") onAction('success', 'Correto! O chorume é altamente tóxico se não for tratado num aterro sanitário.');
-    else if (val === "agrotoxico" || val === "agrotoxicos") onAction('success', 'Sim, os agrotóxicos também infiltram. Mas a dica foca no lixo comum.');
-    else onAction('error', 'É um líquido escuro e malcheiroso gerado pelo lixo em decomposição.');
-  };
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={17} title="Poluição Oculta" description="Quando chove sobre um lixão a céu aberto, a água mistura-se com a decomposição do lixo formando um líquido negro e tóxico que se infiltra no solo e polui o lençol freático. Qual o nome deste líquido?" />
-      <div className="flex flex-col gap-6 items-center">
-        <div className="w-full flex justify-center text-6xl">
-            🗑️ ➡️ 💧 ➡️ 💀
-        </div>
-        <input autoFocus value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && check()} placeholder="NOME DO LÍQUIDO TÓXICO" className="w-full bg-stone-950 border-2 border-indigo-500/50 rounded-xl p-4 text-center text-xl font-bold focus:border-indigo-500 outline-none transition-all uppercase" />
-        <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">INVESTIGAR CONTAMINANTE</Button>
-      </div>
-    </Card>
-  );
-};
-
-const Phase18 = ({ onAction, onBack }) => {
-  const [step, setStep] = useState(1);
-
-  const handleChoice = (isCorrect, msg) => {
-    if (isCorrect) {
-      if (step === 1) { onAction('success', 'Correto! Degraus seguram a água na montanha.'); setStep(2); }
-      else onAction('success', 'Correto! Árvores em linha barram o vento forte.');
-    } else {
-      onAction('error', msg);
-    }
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={18} title="Estratégias de Combate" description="Diferentes terrenos exigem diferentes defesas contra a erosão (desgaste do solo)." />
-      
-      {step === 1 ? (
-        <div className="flex flex-col gap-4 text-center">
-           <h4 className="font-black text-lg text-stone-200">Cenário 1: Uma montanha muito íngreme (inclinada).</h4>
-           <p className="text-stone-400 text-sm">Qual a melhor técnica para a água não descer lavando tudo?</p>
-           <Button variant="secondary" onClick={() => handleChoice(false, 'Isso é contra o vento.')}>Quebra-ventos</Button>
-           <Button variant="secondary" onClick={() => handleChoice(true, '')}>Terraceamento (Fazer degraus)</Button>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-4 text-center">
-           <h4 className="font-black text-lg text-stone-200">Cenário 2: Uma planície reta com ventanias constantes.</h4>
-           <p className="text-stone-400 text-sm">Como evitar que a areia do solo seja soprada para longe?</p>
-           <Button variant="secondary" onClick={() => handleChoice(true, '')}>Quebra-ventos (Fileira de árvores)</Button>
-           <Button variant="secondary" onClick={() => handleChoice(false, 'Degraus não ajudam contra o vento no chão reto.')}>Terraceamento</Button>
-        </div>
-      )}
-    </Card>
-  );
-};
-
-const Phase19 = ({ onAction, onBack }) => {
-  const [values, setValues] = useState({ min: 25, org: 25, agu: 25, ar: 25 });
-  
-  const check = () => {
-    const sum = values.min + values.org + values.agu + values.ar;
-    if (sum !== 100) return onAction('error', 'A soma deve dar exatamente 100%!');
-    
-    // Tolerâncias aceitáveis para um solo ideal (45% mineral, 5% orgânico, 25% água, 25% ar)
-    if (values.min === 45 && values.org === 5 && values.agu === 25 && values.ar === 25) {
-        onAction('success', 'Gráfico perfeito do solo ideal!');
-    } else {
-        onAction('error', 'O solo ideal tem muito Mineral (45%), um pouco de matéria Orgânica (5%) e Ar e Água iguais (25%). Tente ajustar.');
-    }
-  };
-
-  return (
-    <Card className="animate-in slide-in-from-right border-indigo-500/50">
-      <PhaseHeader onBack={onBack} level={19} title="O Gráfico Perfeito" description="Ajuste as percentagens exatas do que compõe a 'fatia' de um solo ideal. A soma deve ser 100%." />
-      <div className="grid grid-cols-2 gap-4 mb-6">
-         {[
-           {id: 'min', l: 'Mineral', col: 'text-amber-500'}, 
-           {id: 'org', l: 'Orgânico', col: 'text-green-500'}, 
-           {id: 'agu', l: 'Água', col: 'text-blue-500'}, 
-           {id: 'ar', l: 'Ar', col: 'text-stone-300'}
-         ].map(v => (
-           <div key={v.id} className="bg-stone-900 p-4 rounded-xl flex flex-col items-center gap-2 border border-stone-800">
-             <span className={`font-black text-xs uppercase ${v.col}`}>{v.l}</span>
-             <div className="flex items-center gap-2">
-                <button onClick={() => setValues(p => ({...p, [v.id]: Math.max(0, p[v.id]-5)}))} className="w-8 h-8 bg-stone-800 rounded font-bold">-</button>
-                <span className="w-8 text-center font-black">{values[v.id]}</span>
-                <button onClick={() => setValues(p => ({...p, [v.id]: Math.min(100, p[v.id]+5)}))} className="w-8 h-8 bg-stone-800 rounded font-bold">+</button>
-             </div>
-           </div>
-         ))}
-      </div>
-      <div className="text-center mb-6">
-        <span className={`text-xs font-black uppercase ${values.min + values.org + values.agu + values.ar === 100 ? 'text-green-500' : 'text-red-500'}`}>
-          Total: {values.min + values.org + values.agu + values.ar}%
-        </span>
-      </div>
-      <Button onClick={check} className="w-full bg-indigo-600 hover:bg-indigo-500">VALIDAR PROPORÇÕES</Button>
-    </Card>
-  );
-};
-
-const Phase20 = ({ onAction, onBack }) => {
-    const [pwd, setPwd] = useState(['', '', '']);
-    
-    const check = () => {
-        const p = pwd.join('').toUpperCase();
-        if (p === "SOLO") onAction('success', 'Cofre aberto! O solo é a base da nossa sobrevivência.');
-        else onAction('error', 'A senha está incorreta. Leia as dicas com atenção.');
+/* ===================== telas ===================== */
+function render() {
+  const app = $("#app");
+  paintHud();
+  if (S.scr === "home") {
+    app.innerHTML = `<div class="card anim center">
+      <div class="hero">&#128506;</div>
+      <div class="big-title">Jornada<em>Geológica</em></div>
+      <p class="lead">Vinte desafios sobre o solo: escave um perfil, meça o pH, monte a mistura ideal, salve um rio e abra o cofre final da Olimpíada de Ciências.</p>
+      <div class="pills"><span class="pill">20 fases</span><span class="pill">10 minijogos</span><span class="pill">&#11088; 60 estrelas</span><span class="pill">Salva sozinho</span></div>
+      <button class="btn" data-a="start" style="padding:19px">Iniciar expedição</button>
+      ${S.best ? `<div class="hintline">melhor pontuação: ${S.best}</div>` : ""}
+    </div>`;
+    return;
+  }
+  if (S.scr === "map") {
+    const unlocked = Math.max(...Object.keys(S.stars).map(Number).concat([-1])) + 1;
+    const node = i => {
+      const s = S.stars[i], cls = s ? "done" : i === S.ph ? "now" : i <= unlocked ? "" : "lock";
+      return `<button class="node ${cls}" data-a="sel" data-i="${i}" ${i > unlocked ? "disabled" : ""}>
+        <b>${i + 1}</b><u>${s ? "&#11088;".repeat(s) : i <= unlocked ? "&#9679;" : "&#128274;"}</u></button>`;
     };
+    app.innerHTML = `<div class="card anim">
+      <div class="phead"><span class="tag">Mapa da expedição</span>
+        <button class="ghost" data-a="reset">apagar progresso</button></div>
+      <div class="sec">Fundamentos &middot; fases 1 a 10</div>
+      <div class="map">${[...Array(10)].map((_, i) => node(i)).join("")}</div>
+      <div class="sec">Olimpíada de Ciências &middot; fases 11 a 20</div>
+      <div class="map">${[...Array(10)].map((_, i) => node(i + 10)).join("")}</div>
+      <div class="row"><button class="btn" data-a="sel" data-i="${Math.min(unlocked, 19)}">
+        ${unlocked === 0 ? "Começar fase 1" : "Continuar na fase " + (Math.min(unlocked, 19) + 1)}</button></div>
+      <div class="hintline">pontos ${S.score} &middot; estrelas ${totalStars()}/60 &middot; tempo ${mmss(S.secs)}</div>
+    </div>`;
+    return;
+  }
+  if (S.scr === "play") {
+    const ph = PHASES[S.ph], st = ph.steps[S.st];
+    app.innerHTML = `<div class="card anim ${ph.late ? "late" : ""}">
+      <div class="phead">
+        <span class="tag">Fase ${S.ph + 1} de 20</span>
+        ${S.streak >= 2 ? `<span class="tag">&#128293; ${S.streak} seguidas</span>` : ""}
+        <button class="ghost" data-a="map">mapa</button>
+      </div>
+      <h2 class="ptitle">${ph.ico} ${ph.t}</h2>
+      <div class="brief">${ph.brief}</div>
+      ${ph.steps.length > 1 ? `<div class="steps">${ph.steps.map((_, i) => `<i class="${i <= S.st ? "on" : ""}"></i>`).join("")}</div>` : ""}
+      ${R[st.type](st)}
+      <div class="row"><button class="btn gh" data-a="hint">&#128161; Dica (-10 pts)</button></div>
+    </div>`;
+    const ti = $("#ti"); if (ti) ti.focus();
+    const c0 = $(".code input"); if (c0) c0.focus();
+    return;
+  }
+  if (S.scr === "done") {
+    const ph = PHASES[S.ph], s = S.stars[S.ph];
+    app.innerHTML = `<div class="card anim center ${ph.late ? "late" : ""}">
+      <div class="hero">${ph.ico}</div>
+      <div class="big-title" style="font-size:27px">Fase ${S.ph + 1} concluída</div>
+      <div class="stars">${"&#11088;".repeat(s)}${"&#128308;".repeat(0)}${"&#9734;".repeat(3 - s)}</div>
+      <div class="fact"><b>Você sabia?</b>${ph.fact}</div>
+      <button class="btn ${ph.late ? "lateb" : ""}" data-a="next">
+        ${S.ph + 1 >= PHASES.length ? "Ver diploma" : "Próxima fase &#8594;"}</button>
+      <div class="row"><button class="btn gh" data-a="map">Voltar ao mapa</button></div>
+    </div>`;
+    return;
+  }
+  if (S.scr === "win") {
+    const st = totalStars(), pct = Math.round(st / 60 * 100);
+    const nota = pct >= 90 ? "Geólogo-chefe" : pct >= 70 ? "Pesquisador de campo" : pct >= 50 ? "Aprendiz de expedição" : "Explorador iniciante";
+    app.innerHTML = `<div class="card anim center late">
+      <div class="hero">&#127942;</div>
+      <div class="big-title">Diplomado!</div>
+      <p class="lead">Você atravessou as 20 fases, da rocha-mãe ao cofre final. Agora sabe como o solo nasce, como ele se perde e como cuidamos dele.</p>
+      <div class="hud" style="margin:0 0 14px">
+        <div class="stat"><b>${S.score}</b><span>Pontos</span></div>
+        <div class="stat"><b>${st}/60</b><span>Estrelas</span></div>
+        <div class="stat"><b>${mmss(S.secs)}</b><span>Tempo</span></div>
+      </div>
+      <div class="pills"><span class="pill">Título: ${nota}</span><span class="pill">${pct}% de aproveitamento</span></div>
+      <button class="btn gr" data-a="again">Jogar de novo</button>
+      <div class="row"><button class="btn gh" data-a="map">Rever fases</button></div>
+    </div>`;
+    return;
+  }
+}
 
-    return (
-        <Card className="animate-in slide-in-from-right border-indigo-500/50">
-            <PhaseHeader onBack={onBack} level={20} title="O Cofre da Terra" description="Resolva o enigma final respondendo às perguntas. Junte as primeiras letras das respostas para formar a Palavra-Passe Final (4 letras)." />
-            
-            <div className="space-y-4 mb-8 text-sm font-medium text-stone-300">
-                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
-                    1. A menor partícula de sedimento do solo chama-se... (Silte, Argila ou Areia?)
-                </div>
-                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
-                    2. A camada mais rica em matéria orgânica é o Horizonte... (O, A ou B?)
-                </div>
-                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
-                    3. O reservatório subterrâneo que a água da chuva alimenta chama-se... (Lençol Freático ou Aquífero?)
-                </div>
-                <div className="bg-stone-900 p-4 rounded-xl border-l-4 border-indigo-500">
-                    4. A camada de restos de plantas e vida na superfície também é chamada de horizonte... (O, A ou C?)
-                </div>
-            </div>
+/* ===================== interação (delegação de eventos) ===================== */
+$("#app").addEventListener("click", e => {
+  const b = e.target.closest("[data-a]"); if (!b || b.disabled) return;
+  const a = b.dataset.a, i = +b.dataset.i;
+  const ph = PHASES[S.ph], st = ph && ph.steps[S.st];
 
-            <div className="flex justify-center gap-2 mb-8">
-                {[0,1,2,3].map(i => (
-                    <input key={i} maxLength={1} value={pwd[i] || ''} onChange={e => {const n = [...pwd]; n[i] = e.target.value; setPwd(n);}} className="w-14 h-16 bg-stone-950 border-2 border-indigo-500 rounded-xl text-center text-3xl font-black text-white uppercase outline-none focus:bg-indigo-900/20" />
-                ))}
-            </div>
-            <Button onClick={check} variant="success" className="w-full py-5 text-lg">ABRIR O COFRE FINAL</Button>
-        </Card>
-    );
-};
+  switch (a) {
+    case "start": S.ph = 0; S.st = 0; S.pen = 0; S.scr = "play"; W = {}; startClock(); save(); render(); break;
+    case "map": S.scr = "map"; render(); break;
+    case "sel": S.ph = i; S.st = 0; S.pen = 0; W = {}; S.scr = "play"; startClock(); save(); render(); break;
+    case "next": nextPhase(); break;
+    case "again": S = fresh(); S.scr = "play"; W = {}; startClock(); save(); render(); break;
+    case "reset":
+      if (confirm("Apagar todo o progresso salvo?")) { S = fresh(); localStorage.removeItem(SAVE); render(); }
+      break;
+    case "hint": askHint(); break;
 
-const ScreenVictory = ({ onRestart }) => (
-  <Card className="flex flex-col items-center text-center py-20 animate-in bounce-in border-indigo-500 shadow-indigo-500/20 shadow-2xl">
-    <Trophy className="w-32 h-32 text-indigo-500 mb-10 animate-bounce" />
-    <h2 className="text-5xl font-black text-white mb-4 uppercase tracking-tighter leading-none">Diplomado!</h2>
-    <div className="h-1 w-20 bg-indigo-600 mb-8 rounded-full" />
-    <p className="text-stone-300 text-base max-w-md mb-12 leading-relaxed font-bold">
-      Parabéns! Completaste com sucesso os 20 desafios. Provaste que conheces o valor, a formação e a fragilidade do nosso solo. Tu és o guardião da Terra!
-    </p>
-    <Button onClick={onRestart} className="px-20 py-6 text-xl shadow-2xl bg-indigo-600 hover:bg-indigo-500">VOLTAR AO INÍCIO</Button>
-  </Card>
-);
+    case "opt": {
+      const o = st.opts[i];
+      $$(".opt,.tile", $("#app")).forEach((el, k) => el.classList.add(st.opts[k] && st.opts[k].ok ? "ok" : "no"));
+      o.ok ? right(o.why || "Correto!") : wrong(o.why || "Não é essa.");
+      if (!o.ok) setTimeout(() => render(), 900);
+      break;
+    }
+    case "togg":
+      sfx.tap();
+      W.pick = W.pick.includes(i) ? W.pick.filter(x => x !== i) : W.pick.concat(i).slice(-st.need);
+      render(); break;
+    case "mv": {
+      sfx.tap();
+      const d = +b.dataset.d, j = i + d;
+      if (j < 0 || j >= W.ord.length) break;
+      const arr = W.ord.slice(); [arr[i], arr[j]] = [arr[j], arr[i]]; W.ord = arr; render(); break;
+    }
+    case "dig": {
+      if (W.dug.includes(i)) break;
+      if (i !== W.dug.length) { W.say = "Devemos cavar camada por camada, de cima para baixo!"; sfx.no(); render(); break; }
+      sfx.dig(); W.dug = W.dug.concat(i); W.say = st.layers[i].say; render(); break;
+    }
+    case "slot": sfx.tap(); W.seq[i] = b.dataset.c; render(); break;
+    case "inc": {
+      sfx.tap();
+      const d = +b.dataset.d, id = b.dataset.i;
+      W.n[id] = Math.min(100, Math.max(0, W.n[id] + d)); render(); break;
+    }
+    case "check": {
+      const [ok, msg] = C[st.type](st);
+      ok ? right(msg) : wrong(msg);
+      break;
+    }
+  }
+});
+
+$("#app").addEventListener("input", e => {
+  const a = e.target.dataset.a;
+  const st = PHASES[S.ph] && PHASES[S.ph].steps[S.st];
+  if (a === "rng") { W.v = parseFloat(e.target.value); render(); }
+  if (a === "cd") {
+    W.cd = W.cd || ["", "", "", ""];
+    W.cd[+e.target.dataset.i] = e.target.value.toUpperCase();
+    e.target.value = W.cd[+e.target.dataset.i];
+    const nx = $$(".code input")[+e.target.dataset.i + 1];
+    if (e.target.value && nx) nx.focus();
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (S.scr !== "play") {
+    if (e.key === "Enter") { const b = $("#app .btn:not([disabled])"); if (b) b.click(); }
+    return;
+  }
+  const st = PHASES[S.ph].steps[S.st];
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const b = $('#app [data-a="check"]:not([disabled])'); if (b) b.click();
+    return;
+  }
+  if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+  if (st.type === "quiz" && /^[1-9]$/.test(e.key)) {
+    const b = $$('#app [data-a="opt"]')[+e.key - 1]; if (b) b.click();
+  }
+  if (st.type === "slider" || st.type === "mix") {
+    const r = $('#app [data-a="rng"]'); if (!r) return;
+    if (e.key === "ArrowLeft") { r.value = +r.value - +r.step; r.dispatchEvent(new Event("input", { bubbles: true })); }
+    if (e.key === "ArrowRight") { r.value = +r.value + +r.step; r.dispatchEvent(new Event("input", { bubbles: true })); }
+  }
+});
+
+$("#mute").addEventListener("click", () => { S.mute = !S.mute; save(); paintHud(); if (!S.mute) sfx.tap(); });
+$("#mapbtn").addEventListener("click", () => { S.scr = "map"; render(); });
+
+render();
+if (S.scr !== "home") startClock();
+</script>
+</body>
+</html>
